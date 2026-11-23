@@ -41,8 +41,8 @@ class _ChangeTripPageState extends ConsumerState<ChangeTripPage> {
 
   Future<void> _pickDate(Booking b) async {
     final now = sudanNow();
-    final picked = await showDatePicker(
-      context: context,
+    final picked = await showZoolDatePicker(
+      context,
       initialDate: _date ?? _defaultDate(b),
       firstDate: DateTime(now.year, now.month, now.day),
       lastDate: DateTime(now.year, now.month, now.day).add(const Duration(days: 120)),
@@ -256,7 +256,7 @@ class _OptionCard extends StatelessWidget {
           const Divider(height: 20),
           Row(
             children: [
-              Text(enoughSeats ? '${option.seatsAvailable} مقعد متاح' : 'المقاعد غير كافية',
+              Text(enoughSeats ? '${seatsLabel(option.seatsAvailable)} متاحة' : 'المقاعد غير كافية',
                   style: t.bodySmall?.copyWith(color: enoughSeats ? null : ZoolColors.error)),
               const Spacer(),
               Text(

@@ -29,7 +29,10 @@ void main() {
     });
 
     test('formats for display', () {
-      expect(formatPhone('+249912345678'), '+249 91 234 5678');
+      expect(formatPhone('+249912345678'), '\u2066+249 91 234 5678\u2069');
+      expect(seatsLabel(1), 'مقعد واحد');
+      expect(seatsLabel(5), '5 مقاعد');
+      expect(seatsLabel(28), '28 مقعدًا');
     });
   });
 

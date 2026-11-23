@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zool_core/zool_core.dart';
@@ -9,6 +10,7 @@ import 'app/router.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   final session = AuthSession(authPath: '/broker/auth', store: SecureTokenStore('zoolgo.broker.refresh'));
   session.restore();
   runApp(

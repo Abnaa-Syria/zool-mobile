@@ -135,7 +135,7 @@ class _ReviewPageState extends ConsumerState<ReviewPage> {
                   children: [
                     const Text('ملخص الدفع والمحفظة', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: ZoolColors.textStrong)),
                     const SizedBox(height: 8),
-                    InfoRow('قيمة التذاكر الإجمالية (${q.seatCount + (q.returnLeg?.seatCount ?? 0)} تذكرة):', formatSdg(q.grandTotalMinor)),
+                    InfoRow('قيمة التذاكر (${ticketsLabel(q.seatCount + (q.returnLeg?.seatCount ?? 0))}):', formatSdg(q.grandTotalMinor)),
                     InfoRow('عمولتك (تُسوّى لاحقًا):', '+${formatSdg(q.grandCommissionMinor)}', valueColor: ZoolColors.brand),
                     const Divider(height: 18),
                     InfoRow('رصيد المحفظة قبل الحجز:', formatSdg(q.walletBalanceMinor)),

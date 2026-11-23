@@ -17,3 +17,4 @@ pubspec_overrides.yaml
 key.properties
 **/android/local.properties
 .env*
+**/test/failures/

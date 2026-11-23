@@ -69,7 +69,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   Future<void> _pickDate({required bool isReturn}) async {
     final first = isReturn ? _date : _today();
     final initial = isReturn ? (_returnDate != null && !_returnDate!.isBefore(first) ? _returnDate! : first) : _date;
-    final picked = await showDatePicker(context: context, firstDate: first, lastDate: _today().add(const Duration(days: 120)), initialDate: initial);
+    final picked = await showZoolDatePicker(context, firstDate: first, lastDate: _today().add(const Duration(days: 120)), initialDate: initial);
     if (picked == null) return;
     setState(() {
       if (isReturn) {
@@ -103,7 +103,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     if (picked != null) setState(() => _count = picked);
   }
 
-  static String _travellers(int n) => n == 1 ? '1 مسافر' : '$n مسافرين';
+  static String _travellers(int n) => travellersLabel(n);
 
   void _submit() {
     String? error;

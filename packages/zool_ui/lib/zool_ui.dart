@@ -4,6 +4,7 @@ library;
 export 'src/theme.dart';
 export 'src/widgets/basics.dart';
 export 'src/widgets/chrome.dart';
+export 'src/widgets/date_sheet.dart';
 export 'src/widgets/otp_login.dart';
 export 'src/widgets/paged_list.dart';
 export 'src/widgets/seat_map.dart';

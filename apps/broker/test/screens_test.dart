@@ -175,9 +175,13 @@ void main() {
     return GoRouter.of(tester.element(find.byType(Navigator).first));
   }
 
+  /// Always checks the layout (any overflow fails the test); writes a review screenshot only
+  /// with --update-goldens (screenshots are not committed).
   Future<void> shot(WidgetTester tester, String name) async {
     await tester.pumpAndSettle();
-    await expectLater(find.byType(MaterialApp), matchesGoldenFile('_screens/$name.png'));
+    if (autoUpdateGoldenFiles) {
+      await expectLater(find.byType(MaterialApp), matchesGoldenFile('_screens/$name.png'));
+    }
   }
 
   testWidgets('home', (tester) async {

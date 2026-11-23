@@ -178,7 +178,7 @@ class _Body extends ConsumerWidget {
               const SizedBox(height: 8),
               row('خط الرحلة:', '${b.origin} ← ${b.destination}'),
               row('تاريخ المغادرة:', '${shortDate(b.departureAt)} · ${formatTime(b.departureAt)}'),
-              if (seats.isNotEmpty) row('المقاعد المحجوزة:', '${b.activeTickets.length} مقاعد ($seats)'),
+              if (seats.isNotEmpty) row('المقاعد المحجوزة:', '${seatsLabel(b.activeTickets.length)} ($seats)'),
               const Divider(height: 20),
               Row(
                 children: [

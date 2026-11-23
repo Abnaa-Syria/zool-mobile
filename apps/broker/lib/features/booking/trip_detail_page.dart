@@ -32,7 +32,7 @@ class TripDetailPage extends ConsumerWidget {
                     children: [
                       MoneyText(formatSdg(t.basePrice), size: 22),
                       const Text('للمسافر', style: TextStyle(fontSize: 12, color: ZoolColors.navInactive)),
-                      Text('${t.seatsFree} مقعد متاح', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: ZoolColors.brand)),
+                      Text('${seatsLabel(t.seatsFree)} متاحة', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: ZoolColors.brand)),
                     ],
                   ),
                   const SizedBox(width: 16),

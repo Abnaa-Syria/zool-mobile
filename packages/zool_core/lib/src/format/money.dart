@@ -43,3 +43,17 @@ String latinDigits(String s) {
   }
   return b.toString();
 }
+
+/// Arabic counted noun: 1 → "مقعد واحد", 2 → "مقعدان", 3–10 → "5 مقاعد", 11+ → "12 مقعدًا".
+String countLabel(int n, {required String one, required String two, required String few, required String many}) {
+  if (n == 1) return one;
+  if (n == 2) return two;
+  if (n >= 3 && n <= 10) return '$n $few';
+  return '$n $many';
+}
+
+String seatsLabel(int n) => n == 0 ? 'لا مقاعد' : countLabel(n, one: 'مقعد واحد', two: 'مقعدان', few: 'مقاعد', many: 'مقعدًا');
+
+String ticketsLabel(int n) => n == 0 ? '0 تذاكر' : countLabel(n, one: 'تذكرة واحدة', two: 'تذكرتان', few: 'تذاكر', many: 'تذكرة');
+
+String travellersLabel(int n) => countLabel(n, one: 'مسافر واحد', two: 'مسافران', few: 'مسافرين', many: 'مسافرًا');

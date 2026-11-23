@@ -124,7 +124,7 @@ class _TodaySales extends ConsumerWidget {
         else
           Row(
             children: [
-              Expanded(child: StatTile(label: 'حجوزات اليوم', value: d == null ? '…' : _tickets(d.integer('ticketsSold')))),
+              Expanded(child: StatTile(label: 'حجوزات اليوم', value: d == null ? '…' : ticketsLabel(d.integer('ticketsSold')))),
               const SizedBox(width: 10),
               Expanded(child: StatTile(label: 'إجمالي المبيعات', value: d == null ? '…' : formatSdg(d.integer('grossSalesMinor')))),
               const SizedBox(width: 10),
@@ -141,7 +141,6 @@ class _TodaySales extends ConsumerWidget {
     );
   }
 
-  static String _tickets(int n) => n == 1 ? 'تذكرة' : (n == 2 ? 'تذكرتان' : (n >= 3 && n <= 10 ? '$n تذاكر' : '$n تذكرة'));
 }
 
 class _WalletCard extends ConsumerWidget {

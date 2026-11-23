@@ -53,7 +53,7 @@ class TripCard extends StatelessWidget {
                 ),
               ),
               Text(
-                full ? 'مكتملة' : '${trip.seatsFree} مقاعد متبقية',
+                full ? 'مكتملة' : '${seatsLabel(trip.seatsFree)} متبقية',
                 style: TextStyle(fontSize: 12, color: full ? ZoolColors.error : ZoolColors.textMuted),
               ),
             ],

@@ -77,6 +77,7 @@ class InfoRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
+            flex: 3,
             child: Text(
               label,
               style: TextStyle(fontSize: large ? 14 : 13, color: large ? ZoolColors.textStrong : ZoolColors.textSecondary, fontWeight: large ? FontWeight.w700 : FontWeight.w400),
@@ -84,6 +85,7 @@ class InfoRow extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Flexible(
+            flex: 2,
             child: trailing ??
                 Text(
                   value,

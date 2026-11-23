@@ -160,7 +160,7 @@ class _ResultsPageState extends ConsumerState<ResultsPage> {
     final results = ref.watch(_resultsProvider(search));
     final out = flow.outbound;
     final notBefore = isReturn ? (out!.trip.arrivalAt ?? out.trip.departureAt) : null;
-    final travellers = flow.passengerCount == 1 ? '1 مسافر' : '${flow.passengerCount} مسافرين';
+    final travellers = travellersLabel(flow.passengerCount);
 
     return ZoolPage(
       title: isReturn ? 'رحلة العودة: ${from.name} ← ${to.name}' : '${from.name} ← ${to.name}',

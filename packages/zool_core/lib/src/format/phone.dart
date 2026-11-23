@@ -15,12 +15,14 @@ String? normalizeSudanPhone(String input) {
   return RegExp(r'^\d{9}$').hasMatch(s) ? '$kSudanDialCode$s' : null;
 }
 
-/// "+249912345678" → "+249 91 234 5678" for display.
+/// "+249912345678" → "+249 91 234 5678" for display, isolated left-to-right so it never reads
+/// reversed inside Arabic text.
 String formatPhone(String? e164) {
   if (e164 == null || e164.isEmpty) return '—';
+  var text = e164;
   if (e164.startsWith(kSudanDialCode) && e164.length == 13) {
     final n = e164.substring(4);
-    return '$kSudanDialCode ${n.substring(0, 2)} ${n.substring(2, 5)} ${n.substring(5)}';
+    text = '$kSudanDialCode ${n.substring(0, 2)} ${n.substring(2, 5)} ${n.substring(5)}';
   }
-  return e164;
+  return '\u2066$text\u2069'; // left-to-right isolate
 }
