@@ -1,0 +1,12 @@
+name: zool_mobile_workspace
+publish_to: none
+environment:
+  sdk: ^3.13.0
+workspace:
+  - packages/zool_core
+  - packages/zool_ui
+  - apps/broker
+  - apps/customer
+  - apps/driver
+dev_dependencies:
+  flutter_lints: ^6.0.0

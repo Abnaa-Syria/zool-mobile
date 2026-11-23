@@ -1,0 +1,19 @@
+# Flutter / Dart
+.dart_tool/
+build/
+.packages
+pubspec_overrides.yaml
+*.iml
+.idea/
+.vscode/
+.DS_Store
+
+# Review screenshots rendered by test/screens_test.dart (--update-goldens)
+**/test/_screens/
+
+# Secrets / signing
+*.jks
+*.keystore
+key.properties
+**/android/local.properties
+.env*
