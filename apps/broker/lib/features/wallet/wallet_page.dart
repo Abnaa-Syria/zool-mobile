@@ -22,15 +22,16 @@ class WalletPage extends ConsumerWidget {
     final tabs = [const Tab(text: 'الحركات'), if (canTopUp) const Tab(text: 'طلبات الشحن')];
     return DefaultTabController(
       length: tabs.length,
-      child: Scaffold(
-        appBar: AppBar(title: const Text('المحفظة')),
+      child: ZoolPage(
+        title: 'المحفظة',
         body: NestedScrollView(
           headerSliverBuilder: (_, _) => [
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
                 child: ZoolCard(
-                  color: ZoolColors.secondary,
+                  color: ZoolColors.brand,
+                  radius: ZoolRadii.bigCard,
                   padding: const EdgeInsets.all(18),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -53,7 +54,7 @@ class WalletPage extends ConsumerWidget {
                         FilledButton.icon(
                           style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: ZoolColors.secondary, minimumSize: const Size.fromHeight(46)),
                           onPressed: () => context.push('/top-up/new'),
-                          icon: const Icon(Icons.add_rounded),
+                          icon: const Icon(IconsaxPlusLinear.wallet_add),
                           label: const Text('شحن المحفظة'),
                         ),
                       ],
@@ -62,7 +63,13 @@ class WalletPage extends ConsumerWidget {
                 ),
               ),
             ),
-            SliverToBoxAdapter(child: TabBar(tabs: tabs)),
+            SliverToBoxAdapter(
+              child: Container(
+                margin: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(ZoolRadii.card)),
+                child: TabBar(tabs: tabs),
+              ),
+            ),
           ],
           body: TabBarView(
             children: [
@@ -73,7 +80,7 @@ class WalletPage extends ConsumerWidget {
                   return (items: res.items, totalPages: res.totalPages);
                 },
                 itemBuilder: (context, e) => _LedgerTile(entry: e),
-                empty: const EmptyView(title: 'لا توجد حركات بعد', icon: Icons.receipt_long_outlined),
+                empty: const EmptyView(title: 'لا توجد حركات بعد', icon: IconsaxPlusLinear.receipt_2),
               ),
               if (canTopUp)
                 PagedList<TopUp>(
@@ -83,7 +90,7 @@ class WalletPage extends ConsumerWidget {
                     return (items: res.items, totalPages: res.totalPages);
                   },
                   itemBuilder: (context, x) => _TopUpTile(topUp: x),
-                  empty: const EmptyView(title: 'لا توجد طلبات شحن', icon: Icons.add_card_outlined),
+                  empty: const EmptyView(title: 'لا توجد طلبات شحن', icon: IconsaxPlusLinear.card_add),
                 ),
             ],
           ),
@@ -114,7 +121,7 @@ class _LedgerTile extends StatelessWidget {
           CircleAvatar(
             radius: 18,
             backgroundColor: e.credit ? ZoolColors.secondarySoft : ZoolColors.primarySoft,
-            child: Icon(e.credit ? Icons.south_west_rounded : Icons.north_east_rounded, size: 18, color: e.credit ? ZoolColors.secondary : ZoolColors.primary),
+            child: Icon(e.credit ? IconsaxPlusLinear.arrow_down : IconsaxPlusLinear.arrow_up, size: 18, color: e.credit ? ZoolColors.secondary : ZoolColors.primary),
           ),
           const SizedBox(width: 10),
           Expanded(

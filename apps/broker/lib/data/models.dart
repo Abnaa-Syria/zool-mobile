@@ -67,6 +67,9 @@ class BrokerTrip {
   String get id => json.str('id');
   String? get tripNumber => json.strOrNull('tripNumber');
   String get companyName => json.obj('company').str('name');
+  String? get legalName => json.obj('carrier').strOrNull('legalName');
+  String? get logoUrl => json.obj('carrier').strOrNull('logoUrl');
+  int? get ratingCount => json.obj('carrier').obj('rating').intOrNull('count');
   String get serviceClass => json.str('serviceClass', 'STANDARD');
   TripPoint get origin => TripPoint(json.obj('origin'));
   TripPoint get destination => TripPoint(json.obj('destination'));

@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:zool_core/zool_core.dart';
 import 'package:zool_ui/zool_ui.dart';
 
-import '../../app/labels.dart';
+import '../../app/amenity_icons.dart';
 import '../../data/models.dart';
 
-/// Results card (3083:2001): carrier, class, times, stations, duration, stops, seats left, price,
-/// commission %.
+/// Results card (Figma 3083:2001): carrier, date, timeline, amenities, seats left, price,
+/// the broker's commission, «عرض الرحلة».
 class TripCard extends StatelessWidget {
   const TripCard({super.key, required this.trip, this.onTap});
 
@@ -15,22 +15,18 @@ class TripCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = Theme.of(context).textTheme;
     final stops = trip.intermediateStops;
     final full = trip.seatsFree == 0;
     return ZoolCard(
       onTap: full ? null : onTap,
-      padding: const EdgeInsets.all(14),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.directions_bus_rounded, color: ZoolColors.secondary, size: 20),
-              const SizedBox(width: 6),
-              Expanded(child: Text(trip.companyName, style: t.titleSmall)),
-              StatusBadge(serviceClass(trip.serviceClass), tone: trip.serviceClass == 'VIP' ? BadgeTone.warning : BadgeTone.brand),
-            ],
+          CarrierHeader(
+            name: trip.companyName,
+            subtitle: trip.legalName,
+            logoUrl: trip.logoUrl,
+            trailing: Text(shortDay(trip.departureAt), style: const TextStyle(fontSize: 12, color: ZoolColors.textStrong)),
           ),
           const SizedBox(height: 14),
           RouteTimeline(
@@ -43,22 +39,61 @@ class TripCard extends StatelessWidget {
             durationMinutes: trip.durationMinutes,
             middleLabel: stops == 0 ? 'مباشر' : '$stops توقف',
           ),
-          const Divider(height: 24),
+          const SizedBox(height: 10),
           Row(
             children: [
-              Icon(Icons.event_seat_rounded, size: 18, color: full ? ZoolColors.error : ZoolColors.textSecondary),
-              const SizedBox(width: 4),
-              Text(full ? 'مكتملة' : '${trip.seatsFree} مقعد متاح', style: t.bodySmall?.copyWith(color: full ? ZoolColors.error : null)),
-              const SizedBox(width: 12),
-              StatusBadge('عمولة ${_pct(trip.commissionPercent)}%', tone: BadgeTone.success),
-              const Spacer(),
-              Text(formatSdg(trip.basePrice), style: t.titleMedium?.copyWith(color: ZoolColors.secondary)),
+              Expanded(
+                child: Wrap(
+                  spacing: 8,
+                  children: [
+                    for (final a in trip.amenities.take(6))
+                      Tooltip(message: a.str('nameAr'), child: Icon(amenityIcon(a.str('code')), size: 16, color: ZoolColors.textStrong)),
+                    if (trip.serviceClass == 'VIP') const StatusBadge('VIP', tone: BadgeTone.brand),
+                  ],
+                ),
+              ),
+              Text(
+                full ? 'مكتملة' : '${trip.seatsFree} مقاعد متبقية',
+                style: TextStyle(fontSize: 12, color: full ? ZoolColors.error : ZoolColors.textMuted),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    MoneyText(formatSdg(trip.basePrice), size: 22),
+                    Text('عمولتك ${_pct(trip.commissionPercent)}% · ${formatSdg(trip.expectedCommissionPerSeat)} للمقعد',
+                        style: const TextStyle(fontSize: 11, color: ZoolColors.brand, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+              SizedBox(
+                width: 120,
+                height: 40,
+                child: FilledButton(
+                  onPressed: full ? null : onTap,
+                  style: FilledButton.styleFrom(minimumSize: const Size(120, 40), textStyle: zoolText(14, weight: FontWeight.w700)),
+                  child: const Text('عرض الرحلة'),
+                ),
+              ),
             ],
           ),
         ],
       ),
     );
   }
+}
+
+/// "الخميس، 15 مايو"
+String shortDay(DateTime? instant) {
+  if (instant == null) return '';
+  final d = toSudan(instant);
+  return '${kArabicWeekdays[d.weekday - 1]}، ${d.day} ${kArabicMonths[d.month - 1]}';
 }
 
 String _pct(double v) => v == v.roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);

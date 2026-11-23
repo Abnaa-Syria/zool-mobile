@@ -6,9 +6,10 @@ import 'package:zool_ui/zool_ui.dart';
 
 import '../../app/providers.dart';
 import '../../data/models.dart';
+import '../home/home_page.dart';
 import 'flow.dart';
 
-/// New booking search (3083:1881): cities, date, passengers, one way / round trip.
+/// «حجز جديد» tab (Figma 3083:1881): from / to, date, passengers, one way / round trip.
 class SearchPage extends ConsumerStatefulWidget {
   const SearchPage({super.key});
 
@@ -68,12 +69,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   Future<void> _pickDate({required bool isReturn}) async {
     final first = isReturn ? _date : _today();
     final initial = isReturn ? (_returnDate != null && !_returnDate!.isBefore(first) ? _returnDate! : first) : _date;
-    final picked = await showDatePicker(
-      context: context,
-      firstDate: first,
-      lastDate: _today().add(const Duration(days: 120)),
-      initialDate: initial,
-    );
+    final picked = await showDatePicker(context: context, firstDate: first, lastDate: _today().add(const Duration(days: 120)), initialDate: initial);
     if (picked == null) return;
     setState(() {
       if (isReturn) {
@@ -84,6 +80,30 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       }
     });
   }
+
+  Future<void> _pickCount() async {
+    final picked = await showModalBottomSheet<int>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('عدد المسافرين', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            for (var n = 1; n <= 9; n++)
+              ListTile(
+                title: Text(_travellers(n)),
+                trailing: n == _count ? const Icon(IconsaxPlusBold.tick_circle, color: ZoolColors.brand) : null,
+                onTap: () => Navigator.of(ctx).pop(n),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (picked != null) setState(() => _count = picked);
+  }
+
+  static String _travellers(int n) => n == 1 ? '1 مسافر' : '$n مسافرين';
 
   void _submit() {
     String? error;
@@ -108,125 +128,214 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
   @override
   Widget build(BuildContext context) {
-    final t = Theme.of(context).textTheme;
-    return PopScope(
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) ref.read(bookingFlowProvider.notifier).abandon();
-      },
-      child: Scaffold(
-        appBar: AppBar(title: const Text('حجز جديد')),
-        body: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment(value: false, label: Text('ذهاب فقط')),
-                ButtonSegment(value: true, label: Text('ذهاب وعودة')),
-              ],
-              selected: {_roundTrip},
-              showSelectedIcon: false,
-              style: SegmentedButton.styleFrom(
-                selectedBackgroundColor: ZoolColors.secondarySoft,
-                selectedForegroundColor: ZoolColors.secondary,
-              ),
-              onSelectionChanged: (v) => setState(() => _roundTrip = v.first),
-            ),
-            const SizedBox(height: 16),
-            ZoolCard(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: Stack(
-                alignment: AlignmentDirectional.centerEnd,
-                children: [
-                  Column(
+    final me = ref.watch(meProvider).value;
+    return ZoolPage(
+      header: BrokerGreeting(me: me),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        children: [
+          ZoolCard(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(
+                  height: 64,
+                  child: Stack(
+                    alignment: Alignment.center,
                     children: [
-                      _FieldTile(icon: Icons.trip_origin_rounded, label: 'من', value: _from?.name, onTap: () => _pickCity(from: true)),
-                      const Divider(indent: 48),
-                      _FieldTile(icon: Icons.location_on_rounded, label: 'إلى', value: _to?.name, onTap: () => _pickCity(from: false)),
+                      Row(
+                        children: [
+                          Expanded(child: _CityBox(label: 'من', city: _from?.name, onTap: () => _pickCity(from: true))),
+                          const SizedBox(width: 10),
+                          Expanded(child: _CityBox(label: 'إلى', city: _to?.name, onTap: () => _pickCity(from: false))),
+                        ],
+                      ),
+                      Material(
+                        color: Colors.white,
+                        shape: const CircleBorder(side: BorderSide(color: ZoolColors.divider)),
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: () => setState(() {
+                            final f = _from;
+                            _from = _to;
+                            _to = f;
+                          }),
+                          child: const SizedBox(
+                            width: 32,
+                            height: 32,
+                            child: Icon(IconsaxPlusLinear.arrow_swap_horizontal, size: 18, color: ZoolColors.brand, semanticLabel: 'تبديل المدينتين'),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
-                  Padding(
-                    padding: const EdgeInsetsDirectional.only(end: 8),
-                    child: IconButton.filledTonal(
-                      tooltip: 'تبديل المدينتين',
-                      onPressed: () => setState(() {
-                        final f = _from;
-                        _from = _to;
-                        _to = f;
-                      }),
-                      icon: const Icon(Icons.swap_vert_rounded),
+                ),
+                const SizedBox(height: 10),
+                _Box(
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => _pickDate(isReturn: false),
+                          child: Row(
+                            children: [
+                              const Icon(IconsaxPlusLinear.calendar_1, size: 20, color: ZoolColors.textStrong),
+                              const SizedBox(width: 8),
+                              Flexible(child: Text(formatCalendarDate(_date), style: _value, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Container(width: 1, height: 24, color: ZoolColors.divider, margin: const EdgeInsets.symmetric(horizontal: 10)),
+                      InkWell(
+                        onTap: _pickCount,
+                        child: Row(
+                          children: [
+                            Text(_travellers(_count), style: _value),
+                            const SizedBox(width: 4),
+                            const Icon(IconsaxPlusLinear.arrow_down_1, size: 18, color: ZoolColors.textStrong),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (_roundTrip) ...[
+                  const SizedBox(height: 10),
+                  _Box(
+                    child: InkWell(
+                      onTap: () => _pickDate(isReturn: true),
+                      child: Row(
+                        children: [
+                          const Icon(IconsaxPlusLinear.calendar_1, size: 20, color: ZoolColors.textStrong),
+                          const SizedBox(width: 8),
+                          Text(
+                            _returnDate == null ? 'تاريخ العودة' : 'العودة: ${formatCalendarDate(_returnDate!)}',
+                            style: _returnDate == null ? _value.copyWith(color: ZoolColors.textMuted) : _value,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
-              ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(child: _TripType(label: 'ذهاب فقط', icon: IconsaxPlusLinear.arrow_left, selected: !_roundTrip, onTap: () => setState(() => _roundTrip = false))),
+                    const SizedBox(width: 10),
+                    Expanded(child: _TripType(label: 'ذهاب وعودة', icon: IconsaxPlusLinear.repeat, selected: _roundTrip, onTap: () => setState(() => _roundTrip = true))),
+                  ],
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: 10),
+                  Text(_error!, style: const TextStyle(color: ZoolColors.error, fontSize: 13)),
+                ],
+                const SizedBox(height: 12),
+                PrimaryButton(label: 'البحث عن رحلات للعميل', onPressed: (me?.canBook ?? false) ? _submit : null),
+                if (me != null && !me.canBook) ...[
+                  const SizedBox(height: 8),
+                  const Text('ليست لديك صلاحية الحجز. تواصل مع مدير المكتب.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: ZoolColors.textMuted)),
+                ],
+              ],
             ),
-            const SizedBox(height: 12),
-            ZoolCard(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: Column(
-                children: [
-                  _FieldTile(icon: Icons.calendar_today_rounded, label: 'تاريخ الذهاب', value: formatCalendarDate(_date), onTap: () => _pickDate(isReturn: false)),
-                  if (_roundTrip) ...[
-                    const Divider(indent: 48),
-                    _FieldTile(
-                      icon: Icons.event_repeat_rounded,
-                      label: 'تاريخ العودة',
-                      value: _returnDate == null ? null : formatCalendarDate(_returnDate!),
-                      onTap: () => _pickDate(isReturn: true),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static const _value = TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: ZoolColors.textStrong);
+}
+
+class _Box extends StatelessWidget {
+  const _Box({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        height: 48,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(border: Border.all(color: ZoolColors.divider), borderRadius: BorderRadius.circular(ZoolRadii.field)),
+        child: child,
+      );
+}
+
+class _CityBox extends StatelessWidget {
+  const _CityBox({required this.label, required this.city, required this.onTap});
+
+  final String label;
+  final String? city;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      shape: RoundedRectangleBorder(side: const BorderSide(color: ZoolColors.divider), borderRadius: BorderRadius.circular(ZoolRadii.field)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(ZoolRadii.field),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            children: [
+              const Icon(IconsaxPlusBold.location, size: 18, color: ZoolColors.brand),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(label, style: const TextStyle(fontSize: 11, color: ZoolColors.textMuted, height: 1.2)),
+                    Text(
+                      city ?? 'اختر المدينة',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: city == null ? ZoolColors.textMuted : ZoolColors.textStrong, height: 1.3),
                     ),
                   ],
-                ],
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            ZoolCard(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: [
-                  const Icon(Icons.people_alt_rounded, color: ZoolColors.secondary),
-                  const SizedBox(width: 12),
-                  Expanded(child: Text('عدد الركاب', style: t.bodyMedium)),
-                  IconButton(
-                    onPressed: _count > 1 ? () => setState(() => _count--) : null,
-                    icon: const Icon(Icons.remove_circle_outline_rounded),
-                  ),
-                  Text('$_count', style: t.titleMedium),
-                  IconButton(
-                    onPressed: _count < 9 ? () => setState(() => _count++) : null,
-                    icon: const Icon(Icons.add_circle_outline_rounded),
-                  ),
-                ],
-              ),
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: 12),
-              Text(_error!, style: const TextStyle(color: ZoolColors.error)),
             ],
-          ],
+          ),
         ),
-        bottomNavigationBar: BottomActionBar(child: PrimaryButton(label: 'ابحث عن رحلة', icon: Icons.search_rounded, onPressed: _submit)),
       ),
     );
   }
 }
 
-class _FieldTile extends StatelessWidget {
-  const _FieldTile({required this.icon, required this.label, required this.value, required this.onTap});
+class _TripType extends StatelessWidget {
+  const _TripType({required this.label, required this.icon, required this.selected, required this.onTap});
 
-  final IconData icon;
   final String label;
-  final String? value;
+  final IconData icon;
+  final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final t = Theme.of(context).textTheme;
-    return ListTile(
-      onTap: onTap,
-      leading: Icon(icon, color: ZoolColors.secondary),
-      title: Text(label, style: t.bodySmall),
-      subtitle: Text(
-        value ?? 'اختر',
-        style: t.titleSmall?.copyWith(color: value == null ? ZoolColors.textMuted : ZoolColors.text),
+    return Material(
+      color: selected ? ZoolColors.secondarySoft : const Color(0xFFF3F4F6),
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: selected ? ZoolColors.women : Colors.transparent),
+        borderRadius: BorderRadius.circular(ZoolRadii.field),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(ZoolRadii.field),
+        onTap: onTap,
+        child: SizedBox(
+          height: 40,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 18, color: selected ? ZoolColors.brand : ZoolColors.textStrong),
+              const SizedBox(width: 6),
+              Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: selected ? ZoolColors.brand : ZoolColors.textStrong)),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -256,8 +365,7 @@ class _CitySheetState extends State<_CitySheet> {
           Padding(
             padding: const EdgeInsets.all(16),
             child: TextField(
-              autofocus: false,
-              decoration: const InputDecoration(prefixIcon: Icon(Icons.search_rounded), hintText: 'ابحث عن مدينة'),
+              decoration: const InputDecoration(prefixIcon: Icon(IconsaxPlusLinear.search_normal_1), hintText: 'ابحث عن مدينة'),
               onChanged: (v) => setState(() => _q = v.trim()),
             ),
           ),
@@ -266,7 +374,7 @@ class _CitySheetState extends State<_CitySheet> {
               itemCount: list.length,
               separatorBuilder: (_, _) => const Divider(indent: 16, endIndent: 16),
               itemBuilder: (_, i) => ListTile(
-                leading: const Icon(Icons.location_city_rounded, color: ZoolColors.secondary),
+                leading: const Icon(IconsaxPlusBold.location, color: ZoolColors.brand),
                 title: Text(list[i].name),
                 onTap: () => Navigator.of(context).pop(list[i]),
               ),

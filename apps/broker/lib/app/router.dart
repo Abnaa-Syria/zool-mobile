@@ -10,9 +10,11 @@ import '../features/booking/review_page.dart';
 import '../features/booking/search_page.dart';
 import '../features/booking/seats_page.dart';
 import '../features/booking/success_page.dart';
+import '../features/booking/trip_detail_page.dart';
 import '../features/bookings/booking_detail_page.dart';
 import '../features/bookings/bookings_page.dart';
 import '../features/bookings/change_trip_page.dart';
+import '../features/bookings/ticket_page.dart';
 import '../features/home/home_page.dart';
 import '../features/more/commissions_page.dart';
 import '../features/more/more_page.dart';
@@ -47,13 +49,17 @@ GoRouter buildRouter(AuthSession session) {
         builder: (context, state, shell) => BrokerShell(shell: shell),
         branches: [
           StatefulShellBranch(routes: [GoRoute(path: '/', builder: (_, _) => const HomePage())]),
+          StatefulShellBranch(routes: [GoRoute(path: '/book', builder: (_, _) => const SearchPage())]),
           StatefulShellBranch(routes: [GoRoute(path: '/bookings', builder: (_, _) => const BookingsPage())]),
-          StatefulShellBranch(routes: [GoRoute(path: '/wallet', builder: (_, _) => const WalletPage())]),
           StatefulShellBranch(routes: [GoRoute(path: '/more', builder: (_, _) => const MorePage())]),
         ],
       ),
-      // New booking flow (state in bookingFlowProvider).
-      GoRoute(parentNavigatorKey: _rootKey, path: '/book', builder: (_, _) => const SearchPage()),
+      // New booking flow after the search tab (state in bookingFlowProvider).
+      GoRoute(
+        parentNavigatorKey: _rootKey,
+        path: '/book/trip/:leg/:tripId',
+        builder: (_, s) => TripDetailPage(tripId: s.pathParameters['tripId']!, isReturn: s.pathParameters['leg'] == 'return'),
+      ),
       GoRoute(
         parentNavigatorKey: _rootKey,
         path: '/book/results/:leg',
@@ -78,9 +84,15 @@ GoRouter buildRouter(AuthSession session) {
       ),
       GoRoute(
         parentNavigatorKey: _rootKey,
+        path: '/booking/:id/ticket/:ticket',
+        builder: (_, s) => TicketPage(bookingId: s.pathParameters['id']!, ticketNumber: s.pathParameters['ticket']!),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootKey,
         path: '/booking/:id/change-trip',
         builder: (_, s) => ChangeTripPage(bookingId: s.pathParameters['id']!),
       ),
+      GoRoute(parentNavigatorKey: _rootKey, path: '/wallet', builder: (_, _) => const WalletPage()),
       GoRoute(parentNavigatorKey: _rootKey, path: '/top-up/new', builder: (_, _) => const NewTopUpPage()),
       GoRoute(
         parentNavigatorKey: _rootKey,

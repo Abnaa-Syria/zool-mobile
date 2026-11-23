@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:broker/app/providers.dart';
 import 'package:broker/data/broker_api.dart';
 import 'package:broker/data/models.dart';
+import 'package:broker/features/booking/flow.dart';
 import 'package:broker/main.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -139,10 +140,15 @@ class _AuthAdapter implements HttpClientAdapter {
 }
 
 Future<void> _loadFonts() async {
-  final loader = FontLoader('packages/zool_ui/IBMPlexSansArabic')
-    ..addFont(rootBundle.load('packages/zool_ui/assets/fonts/IBMPlexSansArabic-Regular.ttf'))
-    ..addFont(rootBundle.load('packages/zool_ui/assets/fonts/IBMPlexSansArabic-Bold.ttf'));
+  final loader = FontLoader('packages/zool_ui/Cairo');
+  for (final w in [400, 600, 700, 800]) {
+    loader.addFont(rootBundle.load('packages/zool_ui/assets/fonts/Cairo-$w.ttf'));
+  }
   await loader.load();
+  final iconsax = FontLoader('packages/iconsax_plus/IconsaxPlusLinear')..addFont(rootBundle.load('packages/iconsax_plus/fonts/IconsaxPlusLinear.ttf'));
+  await iconsax.load();
+  final iconsaxBold = FontLoader('packages/iconsax_plus/IconsaxPlusBold')..addFont(rootBundle.load('packages/iconsax_plus/fonts/IconsaxPlusBold.ttf'));
+  await iconsaxBold.load();
   final icons = FontLoader('MaterialIcons')..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'));
   await icons.load();
 }
@@ -196,6 +202,38 @@ void main() {
     final router = await boot(tester);
     router.go('/bookings');
     await shot(tester, 'bookings');
+  });
+
+  testWidgets('new booking tab', (tester) async {
+    final router = await boot(tester);
+    router.go('/book');
+    await shot(tester, 'search');
+  });
+
+  testWidgets('results', (tester) async {
+    final router = await boot(tester);
+    final container = ProviderScope.containerOf(tester.element(find.byType(Navigator).first));
+    container.read(bookingFlowProvider.notifier).setSearch(
+          fromCity: City({'id': 'krt', 'nameAr': 'الخرطوم'}),
+          toCity: City({'id': 'pzu', 'nameAr': 'بورتسودان'}),
+          date: DateTime.now().add(const Duration(days: 1)),
+          passengerCount: 2,
+          roundTrip: false,
+        );
+    router.push('/book/results/outbound');
+    await shot(tester, 'results');
+  });
+
+  testWidgets('trip details', (tester) async {
+    final router = await boot(tester);
+    router.push('/book/trip/outbound/trip1');
+    await shot(tester, 'trip');
+  });
+
+  testWidgets('e-ticket', (tester) async {
+    final router = await boot(tester);
+    router.push('/booking/b1/ticket/TK-100231');
+    await shot(tester, 'ticket');
   });
 
   testWidgets('more / profile', (tester) async {

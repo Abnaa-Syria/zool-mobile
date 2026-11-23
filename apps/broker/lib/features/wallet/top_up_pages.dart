@@ -54,8 +54,8 @@ class _NewTopUpPageState extends ConsumerState<NewTopUpPage> {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    return Scaffold(
-      appBar: AppBar(title: const Text('شحن المحفظة')),
+    return ZoolPage(
+      title: 'شحن المحفظة',
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -85,7 +85,7 @@ class _NewTopUpPageState extends ConsumerState<NewTopUpPage> {
           ),
         ],
       ),
-      bottomNavigationBar: BottomActionBar(child: PrimaryButton(label: 'إنشاء طلب الشحن', busy: _busy, onPressed: _submit)),
+      bottomBar: ZoolBottomBar(child: PrimaryButton(label: 'إنشاء طلب الشحن', busy: _busy, onPressed: _submit)),
     );
   }
 }
@@ -128,8 +128,8 @@ class _TopUpDetailPageState extends ConsumerState<TopUpDetailPage> {
       if (next.value != null) _schedule(next.value!);
     });
     final t = Theme.of(context).textTheme;
-    return Scaffold(
-      appBar: AppBar(title: const Text('طلب شحن')),
+    return ZoolPage(
+      title: 'طلب شحن',
       body: AsyncBody(
         value: topUp,
         onRetry: () => ref.invalidate(topUpProvider(widget.topUpId)),
@@ -161,7 +161,7 @@ class _TopUpDetailPageState extends ConsumerState<TopUpDetailPage> {
                 const SizedBox(height: 8),
                 Text('ادفع المبلغ ثم ارفع صورة الإيصال مع رقم العملية لتراجعه المنصة.', style: t.bodySmall),
                 const SizedBox(height: 12),
-                PrimaryButton(label: 'رفع الإيصال', icon: Icons.upload_file_rounded, onPressed: () => _showEvidenceSheet(context, x)),
+                PrimaryButton(label: 'رفع الإيصال', icon: IconsaxPlusLinear.document_upload, onPressed: () => _showEvidenceSheet(context, x)),
                 if (x.mockConfirmAvailable) ...[
                   const SizedBox(height: 10),
                   OutlinedButton(
@@ -178,9 +178,9 @@ class _TopUpDetailPageState extends ConsumerState<TopUpDetailPage> {
                   ),
                 ],
               ] else if (x.status == 'PENDING_REVIEW')
-                const _Hint(icon: Icons.hourglass_top_rounded, text: 'الإيصال قيد مراجعة المنصة. ستتحدث الحالة تلقائيًا وتصلك رسالة عند التأكيد.')
+                const _Hint(icon: IconsaxPlusLinear.timer_1, text: 'الإيصال قيد مراجعة المنصة. ستتحدث الحالة تلقائيًا وتصلك رسالة عند التأكيد.')
               else if (x.status == 'CONFIRMED')
-                const _Hint(icon: Icons.check_circle_rounded, text: 'تمت إضافة المبلغ إلى محفظة المكتب.'),
+                const _Hint(icon: IconsaxPlusBold.tick_circle, text: 'تمت إضافة المبلغ إلى محفظة المكتب.'),
             ],
           );
         },
@@ -282,9 +282,9 @@ class _EvidenceSheetState extends ConsumerState<_EvidenceSheet> {
             const SizedBox(height: 12),
             Row(
               children: [
-                Expanded(child: OutlinedButton.icon(onPressed: () => _pick(ImageSource.camera), icon: const Icon(Icons.photo_camera_rounded), label: const Text('كاميرا'))),
+                Expanded(child: OutlinedButton.icon(onPressed: () => _pick(ImageSource.camera), icon: const Icon(IconsaxPlusLinear.camera), label: const Text('كاميرا'))),
                 const SizedBox(width: 10),
-                Expanded(child: OutlinedButton.icon(onPressed: () => _pick(ImageSource.gallery), icon: const Icon(Icons.photo_library_rounded), label: const Text('المعرض'))),
+                Expanded(child: OutlinedButton.icon(onPressed: () => _pick(ImageSource.gallery), icon: const Icon(IconsaxPlusLinear.gallery), label: const Text('المعرض'))),
               ],
             ),
             if (_file != null) ...[

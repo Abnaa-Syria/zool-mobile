@@ -5,7 +5,8 @@ import 'package:zool_core/zool_core.dart';
 
 import '../theme.dart';
 
-/// "07:00 ص  ●────── 3 س 45 د ──────●  10:45 ص" with the cities/stations under the times.
+/// Design timeline: departure time (green, bold) · city · «المغادرة» on the start, a dotted line
+/// with the duration above and «مباشر» / stops below, the arrival on the end.
 class RouteTimeline extends StatelessWidget {
   const RouteTimeline({
     super.key,
@@ -27,56 +28,74 @@ class RouteTimeline extends StatelessWidget {
   final String? destinationStation;
   final int? durationMinutes;
 
-  /// Shown under the line (e.g. "مباشر" / "2 توقف").
+  /// Under the line (e.g. "مباشر" / "2 توقف").
   final String? middleLabel;
 
   @override
   Widget build(BuildContext context) {
-    final t = Theme.of(context).textTheme;
-    Widget end(DateTime? time, String city, String? station, CrossAxisAlignment align) => Expanded(
-          flex: 3,
+    Widget end(DateTime? time, String city, String? station, String label) => SizedBox(
+          width: 84,
           child: Column(
-            crossAxisAlignment: align,
             children: [
-              Text(formatTime(time), style: t.titleMedium),
-              const SizedBox(height: 2),
-              Text(city, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
-              if (station != null && station.isNotEmpty)
-                Text(station, style: t.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+              Text(formatClock(time), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: ZoolColors.brand)),
+              Text(
+                station == null || station.isEmpty ? city : '$city\n$station',
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12, color: ZoolColors.textStrong, height: 1.35),
+              ),
+              Text(label, style: const TextStyle(fontSize: 12, color: ZoolColors.textMuted)),
             ],
           ),
         );
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        end(departureAt, originCity, originStation, CrossAxisAlignment.start),
+        end(departureAt, originCity, originStation, 'المغادرة'),
         Expanded(
-          flex: 3,
           child: Padding(
-            padding: const EdgeInsets.only(top: 6),
+            padding: const EdgeInsets.only(top: 2),
             child: Column(
               children: [
-                Text(formatDuration(durationMinutes), style: t.bodySmall),
+                Text(formatDuration(durationMinutes), style: const TextStyle(fontSize: 12, color: ZoolColors.textMuted)),
                 const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const _Dot(),
-                    Expanded(child: Container(height: 1.5, color: ZoolColors.secondary.withValues(alpha: 0.35))),
-                    const Icon(Icons.directions_bus_rounded, size: 18, color: ZoolColors.secondary),
-                    Expanded(child: Container(height: 1.5, color: ZoolColors.secondary.withValues(alpha: 0.35))),
-                    const _Dot(),
-                  ],
-                ),
-                if (middleLabel != null) ...[
-                  const SizedBox(height: 4),
-                  Text(middleLabel!, style: t.bodySmall),
-                ],
+                const _DottedLine(),
+                const SizedBox(height: 4),
+                if (middleLabel != null) Text(middleLabel!, style: const TextStyle(fontSize: 12, color: ZoolColors.textMuted)),
               ],
             ),
           ),
         ),
-        end(arrivalAt, destinationCity, destinationStation, CrossAxisAlignment.end),
+        end(arrivalAt, destinationCity, destinationStation, 'الوصول'),
       ],
+    );
+  }
+}
+
+/// "08:30" (24-hour, Sudan time) as in the design cards.
+String formatClock(DateTime? instant) {
+  if (instant == null) return '—';
+  final d = toSudan(instant);
+  return '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+}
+
+class _DottedLine extends StatelessWidget {
+  const _DottedLine();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 4,
+      child: Row(
+        children: [
+          const _Dot(),
+          const SizedBox(width: 8),
+          Expanded(child: CustomPaint(painter: _DashPainter(), size: const Size.fromHeight(1))),
+          const SizedBox(width: 8),
+          const _Dot(),
+        ],
+      ),
     );
   }
 }
@@ -85,11 +104,80 @@ class _Dot extends StatelessWidget {
   const _Dot();
 
   @override
-  Widget build(BuildContext context) => Container(
-        width: 8,
-        height: 8,
-        decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: ZoolColors.secondary, width: 2)),
-      );
+  Widget build(BuildContext context) =>
+      const SizedBox(width: 4, height: 4, child: DecoratedBox(decoration: BoxDecoration(color: ZoolColors.brand, shape: BoxShape.circle)));
+}
+
+class _DashPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = ZoolColors.brand
+      ..strokeWidth = 1;
+    final y = size.height / 2;
+    for (double x = 0; x < size.width; x += 4) {
+      canvas.drawLine(Offset(x, y), Offset((x + 2).clamp(0, size.width), y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// Carrier logo (40 px, 12 radius) or its initial.
+class CarrierLogo extends StatelessWidget {
+  const CarrierLogo({super.key, required this.name, this.logoUrl, this.size = 40});
+
+  final String name;
+  final String? logoUrl;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final fallback = Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(color: ZoolColors.secondarySoft, borderRadius: BorderRadius.circular(12)),
+      child: Text(name.isEmpty ? '؟' : name.characters.first, style: TextStyle(color: ZoolColors.brand, fontWeight: FontWeight.w800, fontSize: size * 0.45)),
+    );
+    if (logoUrl == null || logoUrl!.isEmpty) return fallback;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Image.network(logoUrl!, width: size, height: size, fit: BoxFit.cover, errorBuilder: (_, _, _) => fallback),
+    );
+  }
+}
+
+/// Logo · carrier name (bold) · legal name (grey) · date on the end — the top of every trip card.
+class CarrierHeader extends StatelessWidget {
+  const CarrierHeader({super.key, required this.name, this.subtitle, this.logoUrl, this.trailing});
+
+  final String name;
+  final String? subtitle;
+  final String? logoUrl;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        CarrierLogo(name: name, logoUrl: logoUrl),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: ZoolColors.textStrong), maxLines: 1, overflow: TextOverflow.ellipsis),
+              if (subtitle != null && subtitle!.isNotEmpty)
+                Text(subtitle!, style: const TextStyle(fontSize: 12, color: ZoolColors.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
+            ],
+          ),
+        ),
+        ?trailing,
+      ],
+    );
+  }
 }
 
 /// Seat-hold countdown: "المقاعد محجوزة لك لمدة 04:59". Calls [onExpired] once at zero.
@@ -139,7 +227,7 @@ class _HoldCountdownState extends State<HoldCountdown> {
   Widget build(BuildContext context) {
     final left = widget.expiresAt.difference(DateTime.now());
     final urgent = left.inSeconds <= 60;
-    final color = urgent ? ZoolColors.primary : ZoolColors.secondary;
+    final color = urgent ? ZoolColors.primary : ZoolColors.brand;
     final text = formatCountdown(left);
     if (widget.compact) {
       return Row(mainAxisSize: MainAxisSize.min, children: [
@@ -151,7 +239,7 @@ class _HoldCountdownState extends State<HoldCountdown> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: urgent ? ZoolColors.primarySoft : ZoolColors.secondarySoft,
+        color: urgent ? ZoolColors.primarySoft : Colors.white,
         borderRadius: BorderRadius.circular(ZoolRadii.field),
       ),
       child: Row(

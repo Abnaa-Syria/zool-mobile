@@ -37,15 +37,21 @@ class _PassengersPageState extends ConsumerState<PassengersPage> {
     final flow = ref.watch(bookingFlowProvider);
     final out = flow.outbound;
     if (out == null) {
-      return Scaffold(appBar: AppBar(), body: const EmptyView(title: 'ابدأ الحجز من جديد', icon: Icons.event_seat_outlined));
+      return const ZoolPage(title: 'بيانات المسافرين', body: EmptyView(title: 'ابدأ الحجز من جديد', icon: IconsaxPlusLinear.ticket));
     }
-    return Scaffold(
-      appBar: AppBar(title: const Text('بيانات الركاب')),
+    return ZoolPage(
+      title: 'بيانات المسافرين',
+      bottomBar: ZoolBottomBar(child: PrimaryButton(label: 'مراجعة الحجز والأسعار', onPressed: _continue)),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
         children: [
-          if (flow.expiresAt != null) HoldCountdown(expiresAt: flow.expiresAt!, onExpired: () => onHoldExpired(context, ref)),
+          const Text('أدخل تفاصيل الركاب بدقة', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: ZoolColors.textStrong)),
+          Text('مطلوب لإصدار تذكرة ${out.trip.companyName} الرسمية', style: const TextStyle(fontSize: 12, color: ZoolColors.textMuted)),
           const SizedBox(height: 12),
+          if (flow.expiresAt != null) ...[
+            HoldCountdown(expiresAt: flow.expiresAt!, onExpired: () => onHoldExpired(context, ref)),
+            const SizedBox(height: 12),
+          ],
           for (var i = 0; i < flow.passengers.length; i++) ...[
             _PassengerForm(
               key: ValueKey('p$i'),
@@ -60,10 +66,11 @@ class _PassengersPageState extends ConsumerState<PassengersPage> {
           ],
         ],
       ),
-      bottomNavigationBar: BottomActionBar(child: PrimaryButton(label: 'مراجعة الحجز', onPressed: _continue)),
     );
   }
 }
+
+const _ordinals = ['الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس', 'السادس', 'السابع', 'الثامن', 'التاسع'];
 
 class _PassengerForm extends StatefulWidget {
   const _PassengerForm({
@@ -102,57 +109,65 @@ class _PassengerFormState extends State<_PassengerForm> {
 
   @override
   Widget build(BuildContext context) {
-    final t = Theme.of(context).textTheme;
     final d = widget.draft;
     final err = widget.showErrors ? validatePassenger(d, womenOnly: widget.womenOnly) : (name: null, phone: null, gender: null);
+    Widget label(String text) => Padding(
+          padding: const EdgeInsets.only(bottom: 6, top: 12),
+          child: Text(text, style: const TextStyle(fontSize: 13, color: ZoolColors.textSecondary)),
+        );
     return ZoolCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              Expanded(child: Text('الراكب ${widget.index + 1}', style: t.titleSmall)),
-              if (widget.womenOnly) ...[const StatusBadge('مقعد سيدات', tone: BadgeTone.error), const SizedBox(width: 6)],
-              StatusBadge('مقعد ${widget.seatLabel}', tone: BadgeTone.brand),
+              Expanded(
+                child: Text(
+                  'المسافر ${widget.index < _ordinals.length ? _ordinals[widget.index] : widget.index + 1} (مقعد ${widget.seatLabel})',
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: ZoolColors.textStrong),
+                ),
+              ),
+              if (widget.womenOnly) const StatusBadge('مقعد سيدات', tone: BadgeTone.brand),
             ],
           ),
-          const SizedBox(height: 14),
+          label('الاسم الكامل (مطابق للهوية)'),
           TextField(
             controller: _name,
             textInputAction: TextInputAction.next,
-            decoration: InputDecoration(labelText: 'الاسم الكامل', errorText: err.name),
+            decoration: InputDecoration(hintText: 'مثال: أحمد محمد علي', errorText: err.name),
             onChanged: (v) => widget.onChanged(d.copyWith(fullName: v)),
           ),
-          const SizedBox(height: 12),
+          label('رقم الجوال'),
           TextField(
             controller: _phone,
             keyboardType: TextInputType.phone,
             textInputAction: TextInputAction.next,
             textDirection: TextDirection.ltr,
             inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9٠-٩+ ]')), LengthLimitingTextInputFormatter(16)],
-            decoration: InputDecoration(labelText: 'رقم الجوال', hintText: '09XXXXXXXX', errorText: err.phone),
+            decoration: InputDecoration(hintText: '09XXXXXXXX', errorText: err.phone),
             onChanged: (v) => widget.onChanged(d.copyWith(phone: v)),
           ),
-          const SizedBox(height: 12),
-          Text('الجنس${widget.womenOnly ? ' (مطلوب)' : ''}', style: t.bodySmall),
-          const SizedBox(height: 6),
+          label('الجنس${widget.womenOnly ? ' (مطلوب: مقعد سيدات)' : ''}'),
           Row(
             children: [
-              for (final (value, label) in const [('MALE', 'ذكر'), ('FEMALE', 'أنثى')]) ...[
-                ChoiceChip(
-                  label: Text(label),
-                  selected: d.gender == value,
-                  onSelected: (on) => widget.onChanged(d.copyWith(gender: () => on ? value : null)),
+              for (final (value, text) in const [('MALE', 'ذكر'), ('FEMALE', 'أنثى')]) ...[
+                Expanded(
+                  child: ChoiceChip(
+                    label: SizedBox(width: double.infinity, child: Text(text, textAlign: TextAlign.center)),
+                    selected: d.gender == value,
+                    showCheckmark: false,
+                    onSelected: (on) => widget.onChanged(d.copyWith(gender: () => on ? value : null)),
+                  ),
                 ),
-                const SizedBox(width: 8),
+                if (value == 'MALE') const SizedBox(width: 10),
               ],
             ],
           ),
           if (err.gender != null) Padding(padding: const EdgeInsets.only(top: 4), child: Text(err.gender!, style: const TextStyle(color: ZoolColors.error, fontSize: 12))),
-          const SizedBox(height: 12),
+          label('رقم الهوية الوطنية / الجواز (اختياري)'),
           TextField(
             controller: _id,
-            decoration: const InputDecoration(labelText: 'رقم الهوية (اختياري)'),
+            decoration: const InputDecoration(hintText: 'رقم الهوية'),
             onChanged: (v) => widget.onChanged(d.copyWith(idNumber: v)),
           ),
         ],

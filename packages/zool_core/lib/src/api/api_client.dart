@@ -70,6 +70,12 @@ class ApiClient {
 
   Future<ApiResponse> delete(String path, {Object? body}) => _send('DELETE', path, body: body);
 
+  /// Binary download (e.g. a ticket PDF), with the same token refresh.
+  Future<List<int>> getBytes(String path, {Map<String, Object?>? query}) async {
+    final res = await _send('GET', path, query: query, bytes: true);
+    return res.data as List<int>;
+  }
+
   Future<ApiResponse> _send(
     String method,
     String path, {
@@ -77,6 +83,7 @@ class ApiClient {
     Object? body,
     Map<String, String>? headers,
     bool canRefresh = true,
+    bool bytes = false,
   }) async {
     final token = session.accessToken;
     try {
@@ -84,18 +91,19 @@ class ApiClient {
         path,
         data: body,
         queryParameters: _cleanQuery(query),
-        options: Options(method: method, headers: {
+        options: Options(method: method, responseType: bytes ? ResponseType.bytes : null, headers: {
           ...?headers,
           if (token != null) 'Authorization': 'Bearer $token',
         }),
       );
+      if (bytes) return ApiResponse(res.data, null);
       final envelope = jsonObj(res.data);
       return ApiResponse(envelope['data'], envelope.objOrNull('meta'));
     } catch (e) {
       final error = toApiException(e);
       if (error.isUnauthorized && canRefresh && session.canRefresh) {
         if (await session.refresh()) {
-          return _send(method, path, query: query, body: body, headers: headers, canRefresh: false);
+          return _send(method, path, query: query, body: body, headers: headers, canRefresh: false, bytes: bytes);
         }
       }
       if (error.isUnauthorized && session.isSignedIn) session.expire();

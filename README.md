@@ -7,7 +7,7 @@ screen-to-API map live in the backend repository (`docs/APP_DEVELOPER_GUIDE.md`,
 | Path | What | Status |
 |---|---|---|
 | `packages/zool_core` | API client (envelope, errors, one shared token refresh), OTP auth sessions, money / Sudan-time / phone formatting, Arabic error messages | ✅ |
-| `packages/zool_ui` | Brand theme (RTL Arabic, IBM Plex Sans Arabic) and shared widgets: OTP login, seat map, hold countdown, QR ticket, route timeline, paged list, states, dialogs | ✅ |
+| `packages/zool_ui` | Brand theme from the Figma file (RTL Arabic, Cairo, mint background, Iconsax icons) and shared widgets: OTP login, seat map, hold countdown, QR ticket, route timeline, paged list, states, dialogs | ✅ |
 | `apps/broker` | Agent-office app — `com.zoolgo.broker` | ✅ |
 | `apps/customer` | Customer app — `com.zoolgo.customer` | next |
 | `apps/driver` | Driver app — `com.zoolgo.driver` | after the customer app |

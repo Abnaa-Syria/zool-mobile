@@ -61,6 +61,14 @@ class BrokerApi {
 
   Future<Booking> booking(String id) async => Booking((await client.get('/broker/bookings/$id')).json);
 
+  /// All tickets of a booking as one PDF (`pdfBase64`), recorded as a dispatch on the API.
+  Future<Json> dispatchTickets(String bookingId) async =>
+      (await client.post('/broker/bookings/$bookingId/dispatch', body: {'channel': 'download'})).json;
+
+  /// One ticket as a printable Arabic PDF (to send to the passenger).
+  Future<List<int>> ticketPdf(String bookingId, String ticketNumber) =>
+      client.getBytes('/broker/bookings/$bookingId/tickets/${Uri.encodeComponent(ticketNumber)}/pdf');
+
   /// `{ booking, refundedAmountMinor, commissionClawedBackMinor, balanceAfterMinor }`
   Future<Json> cancel(String id) async => (await client.post('/broker/bookings/$id/cancel')).json;
 

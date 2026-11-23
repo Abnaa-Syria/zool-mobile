@@ -7,7 +7,9 @@ import 'package:zool_ui/zool_ui.dart';
 import '../../app/labels.dart';
 import '../../app/providers.dart';
 import '../../data/models.dart';
+import 'booking_tile.dart';
 import 'change_seat_sheet.dart';
+import 'share_ticket.dart';
 
 final _groupProvider = FutureProvider.autoDispose.family<List<Booking>, String>((ref, groupId) => ref.watch(apiProvider).bookingGroup(groupId));
 
@@ -56,33 +58,29 @@ class BookingDetailPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final booking = ref.watch(bookingProvider(bookingId));
     final canBook = ref.watch(meProvider).value?.canBook ?? false;
-    return Scaffold(
-      appBar: AppBar(title: Text(booking.value == null ? 'تفاصيل الحجز' : 'حجز ${booking.value!.reference}')),
-      body: AsyncBody(
-        value: booking,
-        onRetry: () => ref.invalidate(bookingProvider(bookingId)),
-        data: (b) => RefreshIndicator(
-          onRefresh: () => ref.refresh(bookingProvider(bookingId).future),
-          child: _Body(booking: b),
-        ),
-      ),
-      bottomNavigationBar: booking.value != null && booking.value!.canModify && canBook
-          ? BottomActionBar(
+    final b = booking.value;
+    return ZoolPage(
+      title: 'تفاصيل الحجز والمسافرين',
+      action: b != null && b.isConfirmed
+          ? RoundIconButton(icon: IconsaxPlusLinear.export_1, tooltip: 'إرسال كل التذاكر', onTap: () => shareBookingTickets(context, ref, b))
+          : null,
+      bottomBar: b != null && b.canModify && canBook
+          ? ZoolBottomBar(
               child: Row(
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () => _showChangeMenu(context, ref, booking.value!),
-                      icon: const Icon(Icons.edit_calendar_rounded),
-                      label: const Text('تعديل'),
+                      onPressed: () => _showChangeMenu(context, ref, b),
+                      icon: const Icon(IconsaxPlusLinear.edit_2, size: 20),
+                      label: const Text('تعديل الحجز'),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(foregroundColor: ZoolColors.error, side: const BorderSide(color: ZoolColors.error)),
-                      onPressed: () => _cancel(context, ref, booking.value!),
-                      icon: const Icon(Icons.cancel_outlined),
+                      onPressed: () => _cancel(context, ref, b),
+                      icon: const Icon(IconsaxPlusLinear.close_circle, size: 20),
                       label: const Text('إلغاء الحجز'),
                     ),
                   ),
@@ -90,6 +88,15 @@ class BookingDetailPage extends ConsumerWidget {
               ),
             )
           : null,
+      body: AsyncBody(
+        value: booking,
+        onRetry: () => ref.invalidate(bookingProvider(bookingId)),
+        data: (b) => RefreshIndicator(
+          color: ZoolColors.brand,
+          onRefresh: () => ref.refresh(bookingProvider(bookingId).future),
+          child: _Body(booking: b),
+        ),
+      ),
     );
   }
 
@@ -103,7 +110,7 @@ class BookingDetailPage extends ConsumerWidget {
             Text('تعديل الحجز', style: Theme.of(ctx).textTheme.titleMedium),
             const SizedBox(height: 8),
             ListTile(
-              leading: const Icon(Icons.event_seat_rounded, color: ZoolColors.secondary),
+              leading: const Icon(IconsaxPlusLinear.ticket, color: ZoolColors.secondary),
               title: const Text('تغيير المقعد'),
               subtitle: const Text('مقعد آخر في نفس الرحلة، بدون رسوم'),
               onTap: () {
@@ -112,7 +119,7 @@ class BookingDetailPage extends ConsumerWidget {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.swap_horiz_rounded, color: ZoolColors.secondary),
+              leading: const Icon(IconsaxPlusLinear.repeat, color: ZoolColors.secondary),
               title: const Text('تغيير موعد الرحلة'),
               subtitle: const Text('رحلة أخرى لنفس الشركة والمدينتين، مع فرق السعر'),
               onTap: () {
@@ -136,85 +143,79 @@ class _Body extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final b = booking;
-    final t = Theme.of(context).textTheme;
-    final (label, tone) = bookingStatus(b.status);
+    final (label, tone) = bookingChip(b);
     final leg = legLabel(b.leg);
     final tickets = b.isConfirmed ? b.activeTickets : b.tickets;
+    final seats = b.activeTickets.map((t) => t.seatLabel).join(', ');
+    Widget row(String l, String v) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              SizedBox(width: 110, child: Text(l, style: const TextStyle(fontSize: 12, color: ZoolColors.textMuted))),
+              Expanded(child: Text(v, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: ZoolColors.textStrong))),
+            ],
+          ),
+        );
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       children: [
         ZoolCard(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(
                 children: [
-                  Expanded(child: Text('${b.origin} ← ${b.destination}', style: t.titleMedium)),
-                  if (leg != null) ...[StatusBadge(leg, tone: BadgeTone.brand), const SizedBox(width: 6)],
-                  StatusBadge(label, tone: tone),
+                  Expanded(child: Text(b.companyName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: ZoolColors.brand))),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(color: ZoolColors.secondarySoft, borderRadius: BorderRadius.circular(8)),
+                    child: Text('رقم الحجز: #${b.reference}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: ZoolColors.brand)),
+                  ),
                 ],
               ),
-              const SizedBox(height: 6),
-              Text('${formatLongDate(b.departureAt)} · ${formatTime(b.departureAt)}', style: t.bodyMedium),
-              Text(b.companyName, style: t.bodySmall),
+              const SizedBox(height: 8),
+              Wrap(spacing: 6, children: [StatusBadge(label, tone: tone), if (leg != null) StatusBadge(leg, tone: BadgeTone.brand)]),
+              const SizedBox(height: 8),
+              row('خط الرحلة:', '${b.origin} ← ${b.destination}'),
+              row('تاريخ المغادرة:', '${shortDate(b.departureAt)} · ${formatTime(b.departureAt)}'),
+              if (seats.isNotEmpty) row('المقاعد المحجوزة:', '${b.activeTickets.length} مقاعد ($seats)'),
+              const Divider(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text('عمولتك المحسوبة: ${formatSdg(b.commissionMinor)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: ZoolColors.brand)),
+                  ),
+                  MoneyText(formatSdg(b.totalMinor), size: 20, color: ZoolColors.primary),
+                ],
+              ),
             ],
           ),
         ),
         if (b.status == 'CHANGED' && b.replacedByBookingId != null) ...[
           const SizedBox(height: 12),
           _LinkCard(
-            icon: Icons.info_outline_rounded,
+            icon: IconsaxPlusLinear.info_circle,
             text: 'تم نقل هذا الحجز إلى رحلة أخرى؛ التذاكر الصالحة في الحجز الجديد.',
             action: 'فتح الحجز الجديد',
             onTap: () => context.pushReplacement('/booking/${b.replacedByBookingId}'),
           ),
         ],
         if (b.groupId != null) _OtherLeg(booking: b),
-        const SizedBox(height: 16),
-        SectionTitle('التذاكر (${tickets.length})'),
+        const SizedBox(height: 20),
+        SectionTitle('قائمة المسافرين (${tickets.length})'),
         for (final ticket in tickets) ...[
-          Builder(builder: (context) {
-            final (bl, bt) = ticket.active ? boardingStatus(ticket.boardingStatus) : ('ملغاة', BadgeTone.error);
-            return TicketQrCard(
-              ticketNumber: ticket.ticketNumber,
-              passengerName: ticket.passengerName,
-              seatLabel: ticket.seatLabel,
-              qrPayload: b.isConfirmed ? ticket.qrPayload : null,
-              statusLabel: bl,
-              statusTone: bt,
-            );
-          }),
+          _PassengerTicket(booking: b, ticket: ticket),
           const SizedBox(height: 12),
         ],
-        const SectionTitle('الركاب'),
+        const SizedBox(height: 8),
+        const SectionTitle('تفاصيل إضافية'),
         ZoolCard(
           child: Column(
             children: [
               for (final p in b.passengers)
-                InfoRow(
-                  p.fullName,
-                  [formatPhone(p.phone), if (p.gender == 'FEMALE') 'أنثى' else if (p.gender == 'MALE') 'ذكر'].join(' · '),
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        const SectionTitle('المبالغ'),
-        ZoolCard(
-          child: Column(
-            children: [
-              InfoRow('إجمالي الحجز', formatSdg(b.totalMinor), bold: true),
-              InfoRow('العمولة', formatSdg(b.commissionMinor), valueColor: ZoolColors.secondary),
+                InfoRow(p.fullName, [formatPhone(p.phone), if (p.gender == 'FEMALE') 'أنثى' else if (p.gender == 'MALE') 'ذكر'].join(' · ')),
+              const Divider(height: 16),
               InfoRow('حالة العمولة', commissionStatus(b.commissionStatus)),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        const SectionTitle('معلومات أخرى'),
-        ZoolCard(
-          child: Column(
-            children: [
-              InfoRow('رقم الحجز', b.reference),
               if (b.employeeName != null) InfoRow('الموظف', b.employeeName!),
               InfoRow('تاريخ الحجز', formatDateTime(b.createdAt)),
               if (b.cancelledAt != null) InfoRow('تاريخ الإلغاء', formatDateTime(b.cancelledAt)),
@@ -227,6 +228,63 @@ class _Body extends ConsumerWidget {
           TextButton(onPressed: () => context.push('/booking/${b.replacesBookingId}'), child: const Text('عرض الحجز الأصلي قبل التعديل')),
         ],
       ],
+    );
+  }
+}
+
+/// Passenger card: name, seat, boarding state, «عرض رمز QR» and «إرسال التذكرة».
+class _PassengerTicket extends ConsumerWidget {
+  const _PassengerTicket({required this.booking, required this.ticket});
+
+  final Booking booking;
+  final BookingTicket ticket;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final (bl, bt) = ticket.active ? boardingStatus(ticket.boardingStatus) : ('ملغاة', BadgeTone.error);
+    final usable = booking.isConfirmed && ticket.active;
+    return ZoolCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(ticket.passengerName, style: const TextStyle(fontSize: 14, color: ZoolColors.textStrong)),
+                    Text('مقعد ${ticket.seatLabel}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: ZoolColors.textStrong)),
+                  ],
+                ),
+              ),
+              StatusBadge(bl, tone: bt),
+            ],
+          ),
+          if (usable) ...[
+            const Divider(height: 22),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => context.push('/booking/${booking.id}/ticket/${Uri.encodeComponent(ticket.ticketNumber)}'),
+                    icon: const Icon(IconsaxPlusLinear.scan_barcode, size: 18),
+                    label: const Text('عرض رمز QR'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: () => shareTicket(context, ref, booking, ticket),
+                    icon: const Icon(IconsaxPlusLinear.export_1, size: 18),
+                    label: const Text('إرسال التذكرة', style: TextStyle(fontSize: 14)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -245,7 +303,7 @@ class _OtherLeg extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.only(top: 12),
       child: _LinkCard(
-        icon: Icons.sync_alt_rounded,
+        icon: IconsaxPlusLinear.repeat,
         text: 'رحلة ${legLabel(other.leg) ?? 'أخرى'}: ${other.origin} ← ${other.destination} · ${formatDateTime(other.departureAt)}',
         action: 'فتح',
         onTap: () => context.push('/booking/${other.id}'),

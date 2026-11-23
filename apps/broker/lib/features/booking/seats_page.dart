@@ -4,10 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:zool_core/zool_core.dart';
 import 'package:zool_ui/zool_ui.dart';
 
-import '../../app/labels.dart';
 import '../../app/providers.dart';
 import '../../data/models.dart';
 import 'flow.dart';
+import 'trip_card.dart';
 
 /// Trip detail (3083:2246) + seat selection (3083:2396): pick one seat per passenger, then hold
 /// them (POST /broker/trips/:id/holds) before passengers / the return leg.
@@ -100,8 +100,36 @@ class _SeatsPageState extends ConsumerState<SeatsPage> {
   Widget build(BuildContext context) {
     final tripAsync = ref.watch(tripProvider(widget.tripId));
     final needed = ref.watch(bookingFlowProvider.select((s) => s.passengerCount));
-    return Scaffold(
-      appBar: AppBar(title: Text(widget.isReturn ? 'مقاعد رحلة العودة' : 'اختيار المقاعد')),
+    final trip = tripAsync.value;
+    return ZoolPage(
+      title: widget.isReturn ? 'مقاعد رحلة العودة' : 'اختيار مقعدك',
+      bottomBar: trip == null
+          ? null
+          : ZoolBottomBar(
+              child: Row(
+                children: [
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      MoneyText(formatSdg(trip.basePrice * (_selected.isEmpty ? 1 : _selected.length)), size: 22),
+                      Text(
+                        _selected.length <= 1 ? 'للمسافر الواحد' : 'لـ ${_selected.length} مقاعد',
+                        style: const TextStyle(fontSize: 12, color: ZoolColors.navInactive),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: PrimaryButton(
+                      label: _selected.length == needed ? 'متابعة' : 'اختر ${needed - _selected.length} مقعد',
+                      busy: _busy,
+                      onPressed: _selected.length == needed ? () => _continue(trip) : null,
+                    ),
+                  ),
+                ],
+              ),
+            ),
       body: AsyncBody(
         value: tripAsync,
         onRetry: () => ref.invalidate(tripProvider(widget.tripId)),
@@ -109,73 +137,36 @@ class _SeatsPageState extends ConsumerState<SeatsPage> {
           _seed(trip);
           final layout = trip.layout;
           return RefreshIndicator(
+            color: ZoolColors.brand,
             onRefresh: () => ref.refresh(tripProvider(widget.tripId).future),
             child: ListView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
               children: [
-                _TripInfo(trip: trip),
-                const SizedBox(height: 16),
-                Text('اختر $needed ${needed == 1 ? 'مقعدًا' : 'مقاعد'}', style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 4),
-                Text('المقاعد بالإطار الوردي مخصّصة للسيدات.', style: Theme.of(context).textTheme.bodySmall),
-                const SizedBox(height: 12),
-                Center(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: SeatMap(
-                      seats: [
-                        for (final s in trip.seats)
-                          SeatCell(id: s.id, label: s.label, available: s.available, row: s.row, column: s.column, womenOnly: s.womenOnly),
-                      ],
-                      layout: layout == null
-                          ? null
-                          : SeatLayoutSpec(
-                              rows: layout.integer('rows'),
-                              columns: layout.integer('columns'),
-                              aisleAfterColumn: layout.integer('aisleAfterColumn'),
-                              driverSide: layout.str('driverSide', 'LEFT'),
-                            ),
-                      selected: _selected,
-                      onToggle: (cell) => _toggle(trip.seats.firstWhere((s) => s.id == cell.id), needed),
-                    ),
-                  ),
+                TripSummaryCard(trip: trip),
+                const SizedBox(height: 20),
+                SeatMap(
+                  seats: [
+                    for (final s in trip.seats)
+                      SeatCell(id: s.id, label: s.label, available: s.available, row: s.row, column: s.column, womenOnly: s.womenOnly),
+                  ],
+                  layout: layout == null
+                      ? null
+                      : SeatLayoutSpec(
+                          rows: layout.integer('rows'),
+                          columns: layout.integer('columns'),
+                          aisleAfterColumn: layout.integer('aisleAfterColumn'),
+                          driverSide: layout.str('driverSide', 'LEFT'),
+                        ),
+                  selected: _selected,
+                  onToggle: (cell) => _toggle(trip.seats.firstWhere((s) => s.id == cell.id), needed),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 const SeatLegend(),
               ],
             ),
           );
         },
       ),
-      bottomNavigationBar: tripAsync.value == null
-          ? null
-          : BottomActionBar(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('${_selected.length} / $needed مقعد', style: Theme.of(context).textTheme.bodySmall),
-                        Text(
-                          formatSdg(tripAsync.value!.basePrice * _selected.length),
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(color: ZoolColors.secondary),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(
-                    width: 170,
-                    child: PrimaryButton(
-                      label: 'متابعة',
-                      busy: _busy,
-                      onPressed: _selected.length == needed ? () => _continue(tripAsync.value!) : null,
-                    ),
-                  ),
-                ],
-              ),
-            ),
     );
   }
 }
@@ -190,32 +181,29 @@ int _labelOrder(String a, String b) {
   return a.compareTo(b);
 }
 
-class _TripInfo extends StatelessWidget {
-  const _TripInfo({required this.trip});
+/// Compact white trip card (carrier, date, timeline) used above the seat map and in the review.
+class TripSummaryCard extends StatelessWidget {
+  const TripSummaryCard({super.key, required this.trip, this.title});
 
   final BrokerTrip trip;
+  final String? title;
 
   @override
   Widget build(BuildContext context) {
-    final t = Theme.of(context).textTheme;
-    final stops = trip.stops;
     return ZoolCard(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(child: Text(trip.companyName, style: t.titleSmall)),
-              if (trip.rating != null) ...[
-                const Icon(Icons.star_rounded, color: ZoolColors.warning, size: 18),
-                Text(trip.rating!.toStringAsFixed(1), style: t.bodySmall),
-                const SizedBox(width: 8),
-              ],
-              StatusBadge(serviceClass(trip.serviceClass), tone: BadgeTone.brand),
-            ],
+          if (title != null) ...[
+            Text(title!, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: ZoolColors.brand)),
+            const SizedBox(height: 8),
+          ],
+          CarrierHeader(
+            name: trip.companyName,
+            subtitle: trip.legalName,
+            logoUrl: trip.logoUrl,
+            trailing: Text(shortDay(trip.departureAt), style: const TextStyle(fontSize: 12, color: ZoolColors.textStrong)),
           ),
-          const SizedBox(height: 4),
-          Text(formatLongDate(trip.departureAt), style: t.bodySmall),
           const SizedBox(height: 12),
           RouteTimeline(
             departureAt: trip.departureAt,
@@ -225,41 +213,8 @@ class _TripInfo extends StatelessWidget {
             originStation: trip.origin.station,
             destinationStation: trip.destination.station,
             durationMinutes: trip.durationMinutes,
+            middleLabel: trip.intermediateStops == 0 ? 'مباشر' : '${trip.intermediateStops} توقف',
           ),
-          if (stops.length > 2)
-            Theme(
-              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-              child: ExpansionTile(
-                tilePadding: EdgeInsets.zero,
-                title: Text('المحطات (${stops.length})', style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                children: [
-                  for (final s in stops)
-                    ListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      leading: Icon(
-                        s.kind == 'STOP' ? Icons.radio_button_unchecked_rounded : Icons.location_on_rounded,
-                        color: ZoolColors.secondary,
-                        size: 18,
-                      ),
-                      title: Text(s.station == null ? s.city : '${s.city} — ${s.station}'),
-                      trailing: Text(formatTime(s.scheduledAt), style: t.bodySmall),
-                    ),
-                ],
-              ),
-            ),
-          if (trip.amenities.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [for (final a in trip.amenities) StatusBadge(a.str('nameAr'), tone: BadgeTone.neutral)],
-            ),
-          ],
-          if (trip.vehicleModel != null) ...[
-            const SizedBox(height: 8),
-            Text('الحافلة: ${trip.vehicleModel}', style: t.bodySmall),
-          ],
         ],
       ),
     );

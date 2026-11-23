@@ -17,7 +17,6 @@ Future<void> onHoldExpired(BuildContext context, WidgetRef ref) async {
   ref.read(bookingFlowProvider.notifier).clearLeg(isReturn: false);
   // Back to the outbound results (the search is kept).
   final router = GoRouter.of(context);
-  router.go('/');
-  router.push('/book');
+  router.go('/book');
   router.push('/book/results/outbound');
 }

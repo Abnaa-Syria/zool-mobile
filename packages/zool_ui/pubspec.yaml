@@ -12,6 +12,8 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   flutter_riverpod: ^3.5.0
+  flutter_svg: ^2.5.0
+  iconsax_plus: ^1.0.0
   intl: ^0.20.3
   qr_flutter: ^4.1.0
   zool_core:
@@ -21,9 +23,16 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
 flutter:
+  assets:
+    - assets/images/
+    - assets/icons/
   fonts:
-    - family: IBMPlexSansArabic
+    - family: Cairo
       fonts:
-        - asset: assets/fonts/IBMPlexSansArabic-Regular.ttf
-        - asset: assets/fonts/IBMPlexSansArabic-Bold.ttf
+        - asset: assets/fonts/Cairo-400.ttf
+        - asset: assets/fonts/Cairo-600.ttf
+          weight: 600
+        - asset: assets/fonts/Cairo-700.ttf
           weight: 700
+        - asset: assets/fonts/Cairo-800.ttf
+          weight: 800

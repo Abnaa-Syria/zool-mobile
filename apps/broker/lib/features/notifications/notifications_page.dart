@@ -40,11 +40,9 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
   Widget build(BuildContext context) {
     final api = ref.watch(apiProvider);
     final t = Theme.of(context).textTheme;
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('الإشعارات'),
-        actions: [
-          TextButton(
+    return ZoolPage(
+      title: 'الإشعارات',
+      action: TextButton(
             onPressed: () async {
               try {
                 await api.markAllRead();
@@ -56,8 +54,6 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
             },
             child: const Text('قراءة الكل'),
           ),
-        ],
-      ),
       body: PagedList<AppNotification>(
         reloadKey: _version,
         separator: 8,
@@ -65,7 +61,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
           final res = await api.notifications(page: page);
           return (items: res.items, totalPages: res.totalPages);
         },
-        empty: const EmptyView(title: 'لا توجد إشعارات', icon: Icons.notifications_none_rounded),
+        empty: const EmptyView(title: 'لا توجد إشعارات', icon: IconsaxPlusLinear.notification),
         itemBuilder: (context, n) {
           final unread = !n.isRead && !_read.contains(n.id);
           return ZoolCard(
@@ -75,7 +71,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.notifications_rounded, color: unread ? ZoolColors.secondary : ZoolColors.textMuted),
+                Icon(IconsaxPlusBold.notification, color: unread ? ZoolColors.secondary : ZoolColors.textMuted),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(

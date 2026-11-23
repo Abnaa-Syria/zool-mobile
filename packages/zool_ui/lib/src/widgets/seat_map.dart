@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../theme.dart';
 
@@ -33,9 +34,69 @@ class SeatLayoutSpec {
   final String driverSide;
 }
 
-/// Bus seat map. Columns are drawn physically (column 1 on the left, as the vehicle layout is
-/// defined), the aisle after [SeatLayoutSpec.aisleAfterColumn], the driver at the front.
-/// Without a layout (legacy trips) the seats are laid out in rows of four.
+enum SeatState { available, selected, women, booked }
+
+/// The design's seat (base, back and cushion SVG parts) with its number; colors per state:
+/// available #C7C8CF, selected #115233, women-only #7BC4A5, booked #EDEDEF.
+class SeatIcon extends StatelessWidget {
+  const SeatIcon({super.key, required this.state, this.label, this.width = 40});
+
+  final SeatState state;
+  final String? label;
+  final double width;
+
+  static Color colorOf(SeatState s) => switch (s) {
+        SeatState.available => ZoolColors.border,
+        SeatState.selected => ZoolColors.brand,
+        SeatState.women => ZoolColors.women,
+        SeatState.booked => ZoolColors.divider,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final w = width, h = width * 1.3;
+    final filter = ColorFilter.mode(colorOf(state), BlendMode.srcIn);
+    Widget part(String name, {required double left, required double top, required double right, required double bottom}) => Positioned(
+          left: w * left,
+          top: h * top,
+          right: w * right,
+          bottom: h * bottom,
+          child: SvgPicture.asset('assets/icons/$name.svg', package: 'zool_ui', fit: BoxFit.fill, colorFilter: filter),
+        );
+    return SizedBox(
+      width: w,
+      height: h,
+      child: Stack(
+        children: [
+          // Insets from the Figma seat component (Isolation_Mode 40×52).
+          part('seat_base', left: 0, top: 0.8176, right: 0, bottom: 0),
+          part('seat_back', left: 0.1127, top: 0, right: 0.1126, bottom: 0.2269),
+          part('seat_cushion', left: 0.2892, top: 0.3634, right: 0.2911, bottom: 0.2269),
+          if (label != null)
+            Positioned(
+              left: 0,
+              right: 0,
+              top: h * 0.40,
+              child: Text(
+                label!,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: w * 0.3,
+                  height: 1.1,
+                  fontWeight: FontWeight.w600,
+                  color: state == SeatState.booked ? ZoolColors.border : Colors.white,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Bus seat map from the design: «السائق» at the front, pairs of seats with the aisle between
+/// them. Columns follow the vehicle layout (column 1 on the left). Without a layout (legacy
+/// trips) the seats are laid out in rows of four.
 class SeatMap extends StatelessWidget {
   const SeatMap({
     super.key,
@@ -54,161 +115,101 @@ class SeatMap extends StatelessWidget {
   Widget build(BuildContext context) {
     final spec = layout;
     final placed = spec != null && seats.every((s) => s.row != null && s.column != null);
+    final rows = placed ? _grid(spec) : _fallback();
     return Directionality(
       textDirection: TextDirection.ltr,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: ZoolColors.border),
-        ),
-        child: IntrinsicWidth(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _DriverRow(driverOnRight: spec?.driverSide == 'RIGHT'),
-              const SizedBox(height: 12),
-              if (placed) ..._grid(spec) else ..._fallback(),
-            ],
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Center(
+            child: Text('السائق', textDirection: TextDirection.rtl, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: ZoolColors.textStrong)),
           ),
-        ),
+          const SizedBox(height: 16),
+          for (final r in rows) Padding(padding: const EdgeInsets.only(bottom: 8), child: r),
+        ],
       ),
     );
   }
 
   List<Widget> _grid(SeatLayoutSpec spec) {
     final byPos = {for (final s in seats) '${s.row}:${s.column}': s};
+    final aisle = spec.aisleAfterColumn;
     return [
       for (var r = 1; r <= spec.rows; r++)
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              for (var c = 1; c <= spec.columns; c++) ...[
-                _slot(byPos['$r:$c']),
-                if (c == spec.aisleAfterColumn) const SizedBox(width: 26),
-              ],
+        Row(
+          children: [
+            for (var c = 1; c <= spec.columns; c++) ...[
+              _slot(byPos['$r:$c']),
+              if (c == aisle) const Spacer() else if (c < spec.columns) const SizedBox(width: 12),
             ],
-          ),
+          ],
         ),
     ];
   }
 
   List<Widget> _fallback() {
-    final rows = <Widget>[];
+    final out = <Widget>[];
     for (var i = 0; i < seats.length; i += 4) {
       final chunk = seats.sublist(i, i + 4 > seats.length ? seats.length : i + 4);
-      rows.add(Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            for (var j = 0; j < chunk.length; j++) ...[_slot(chunk[j]), if (j == 1) const SizedBox(width: 26)],
+      out.add(Row(
+        children: [
+          for (var j = 0; j < chunk.length; j++) ...[
+            _slot(chunk[j]),
+            if (j == 1) const Spacer() else if (j < chunk.length - 1) const SizedBox(width: 12),
           ],
-        ),
+        ],
       ));
     }
-    return rows;
+    return out;
   }
 
   Widget _slot(SeatCell? seat) {
-    if (seat == null) return const SizedBox(width: 50, height: 46);
-    return _SeatTile(seat: seat, selected: selected.contains(seat.id), onTap: () => onToggle(seat));
-  }
-}
-
-class _DriverRow extends StatelessWidget {
-  const _DriverRow({required this.driverOnRight});
-
-  final bool driverOnRight;
-
-  @override
-  Widget build(BuildContext context) {
-    final wheel = Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(color: ZoolColors.surfaceMuted, borderRadius: BorderRadius.circular(12)),
-      child: const Icon(Icons.airline_seat_recline_normal_rounded, color: ZoolColors.textMuted),
-    );
-    return Row(
-      mainAxisAlignment: driverOnRight ? MainAxisAlignment.end : MainAxisAlignment.start,
-      children: [Padding(padding: const EdgeInsets.symmetric(horizontal: 3), child: wheel)],
-    );
-  }
-}
-
-class _SeatTile extends StatelessWidget {
-  const _SeatTile({required this.seat, required this.selected, required this.onTap});
-
-  final SeatCell seat;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final taken = !seat.available && !selected;
-    final bg = selected ? ZoolColors.secondary : (taken ? ZoolColors.divider : Colors.white);
-    final fg = selected ? Colors.white : (taken ? ZoolColors.textMuted : ZoolColors.text);
-    final border = seat.womenOnly ? ZoolColors.women : (selected ? ZoolColors.secondary : ZoolColors.border);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 3),
-      child: Semantics(
-        button: true,
-        selected: selected,
-        enabled: !taken,
-        label: 'مقعد ${seat.label}${seat.womenOnly ? '، للسيدات' : ''}${taken ? '، محجوز' : ''}',
-        child: InkWell(
-          onTap: taken ? null : onTap,
-          borderRadius: BorderRadius.circular(10),
-          child: Container(
-            width: 44,
-            height: 46,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: bg,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: border, width: seat.womenOnly ? 2 : 1),
-            ),
-            child: taken
-                ? Icon(Icons.person_rounded, size: 20, color: fg)
-                : Text(seat.label, style: TextStyle(color: fg, fontWeight: FontWeight.w700, fontSize: 13)),
-          ),
-        ),
+    if (seat == null) return const SizedBox(width: 40, height: 52);
+    final isSelected = selected.contains(seat.id);
+    final state = isSelected
+        ? SeatState.selected
+        : !seat.available
+            ? SeatState.booked
+            : seat.womenOnly
+                ? SeatState.women
+                : SeatState.available;
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      enabled: seat.available || isSelected,
+      label: 'مقعد ${seat.label}${seat.womenOnly ? '، للسيدات' : ''}${state == SeatState.booked ? '، محجوز' : ''}',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: state == SeatState.booked ? null : () => onToggle(seat),
+        child: SeatIcon(state: state, label: seat.label),
       ),
     );
   }
 }
 
-/// Legend under the seat map.
+/// Legend under the map: مختار · متاح · محجوز · مخصص للسيدات.
 class SeatLegend extends StatelessWidget {
   const SeatLegend({super.key});
 
   @override
   Widget build(BuildContext context) {
-    Widget item(String label, Color bg, Color border, {double width = 1}) => Row(
+    Widget item(String label, SeatState state) => Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 18,
-              height: 18,
-              decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(5), border: Border.all(color: border, width: width)),
-            ),
-            const SizedBox(width: 6),
-            Text(label, style: Theme.of(context).textTheme.bodySmall),
+            SeatIcon(state: state, width: 18.5),
+            const SizedBox(width: 4),
+            Text(label, style: const TextStyle(fontSize: 12, color: ZoolColors.textMuted)),
           ],
         );
     return Wrap(
-      spacing: 16,
+      alignment: WrapAlignment.spaceBetween,
+      spacing: 14,
       runSpacing: 8,
-      alignment: WrapAlignment.center,
       children: [
-        item('متاح', Colors.white, ZoolColors.border),
-        item('محدد', ZoolColors.secondary, ZoolColors.secondary),
-        item('محجوز', ZoolColors.divider, ZoolColors.divider),
-        item('للسيدات', Colors.white, ZoolColors.women, width: 2),
+        item('مختار', SeatState.selected),
+        item('متاح', SeatState.available),
+        item('محجوز', SeatState.booked),
+        item('مخصص للسيدات', SeatState.women),
       ],
     );
   }

@@ -26,13 +26,15 @@ class _CommissionsPageState extends ConsumerState<CommissionsPage> {
     final t = Theme.of(context).textTheme;
     return DefaultTabController(
       length: _tabs.length,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('العمولات'),
-          bottom: TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: [for (final s in _tabs) Tab(text: accrualStatus(s).$1)]),
-        ),
+      child: ZoolPage(
+        title: 'العمولات',
         body: Column(
           children: [
+            Container(
+              margin: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(ZoolRadii.card)),
+              child: TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: [for (final s in _tabs) Tab(text: accrualStatus(s).$1)]),
+            ),
             if (_summary != null)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -67,7 +69,7 @@ class _CommissionsPageState extends ConsumerState<CommissionsPage> {
                         if (mounted && (_summary == null || page == 1)) setState(() => _summary = data);
                         return (items: data.list('items').map(CommissionAccrual.new).toList(), totalPages: res.totalPages);
                       },
-                      empty: const EmptyView(title: 'لا توجد عمولات هنا', icon: Icons.percent_rounded),
+                      empty: const EmptyView(title: 'لا توجد عمولات هنا', icon: IconsaxPlusLinear.percentage_circle),
                       itemBuilder: (context, a) {
                         final (label, tone) = accrualStatus(a.status);
                         return ZoolCard(

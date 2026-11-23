@@ -9,6 +9,7 @@ import '../../app/providers.dart';
 import '../../data/models.dart';
 import 'flow.dart';
 import 'hold_expired.dart';
+import 'seats_page.dart';
 
 final _quoteProvider = FutureProvider.autoDispose<BookingQuote>((ref) {
   final body = ref.read(bookingFlowProvider).body();
@@ -43,7 +44,7 @@ class _ReviewPageState extends ConsumerState<ReviewPage> {
       if (!mounted) return;
       final id = booking.str('id');
       final router = GoRouter.of(context);
-      router.go('/');
+      router.go('/book');
       router.push('/book/done/$id${ret == null ? '' : '?return=${ret.str('id')}'}');
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -68,56 +69,79 @@ class _ReviewPageState extends ConsumerState<ReviewPage> {
   Widget build(BuildContext context) {
     final flow = ref.watch(bookingFlowProvider);
     if (flow.outbound == null) {
-      return Scaffold(appBar: AppBar(), body: const EmptyView(title: 'ابدأ الحجز من جديد', icon: Icons.event_seat_outlined));
+      return const ZoolPage(title: 'مراجعة وتأكيد الحجز', body: EmptyView(title: 'ابدأ الحجز من جديد', icon: IconsaxPlusLinear.ticket));
     }
     final quote = ref.watch(_quoteProvider);
-    final t = Theme.of(context).textTheme;
-    return Scaffold(
-      appBar: AppBar(title: const Text('مراجعة الحجز')),
+    final q = quote.value;
+    return ZoolPage(
+      title: 'مراجعة وتأكيد الحجز',
+      bottomBar: q == null
+          ? null
+          : ZoolBottomBar(
+              child: PrimaryButton(
+                label: 'تأكيد الحجز والدفع الفوري',
+                busy: _busy,
+                onPressed: q.sufficientBalance && q.withinCeiling ? _confirm : null,
+              ),
+            ),
       body: AsyncBody(
         value: quote,
         onRetry: () => ref.invalidate(_quoteProvider),
         data: (q) {
-          final blocked = !q.sufficientBalance ? 'رصيد المحفظة غير كافٍ لهذا الحجز. اشحن المحفظة ثم أكمل.' : (!q.withinCeiling ? 'هذا الحجز يتجاوز الحد اليومي المسموح للمكتب.' : null);
+          final blocked = !q.sufficientBalance
+              ? 'رصيد المحفظة غير كافٍ لهذا الحجز. اشحن المحفظة ثم أكمل.'
+              : (!q.withinCeiling ? 'هذا الحجز يتجاوز الحد اليومي المسموح للمكتب.' : null);
+          String seatsOf(int i) => [flow.outbound!.seats[i].label, if (flow.inbound != null) flow.inbound!.seats[i].label].join(' / ');
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
             children: [
-              if (flow.expiresAt != null) HoldCountdown(expiresAt: flow.expiresAt!, onExpired: () => onHoldExpired(context, ref)),
-              const SizedBox(height: 12),
-              _LegCard(title: flow.inbound == null ? 'الرحلة' : 'رحلة الذهاب', leg: flow.outbound!, quote: q),
-              if (flow.inbound != null && q.returnLeg != null) ...[
+              if (flow.expiresAt != null) ...[
+                HoldCountdown(expiresAt: flow.expiresAt!, onExpired: () => onHoldExpired(context, ref)),
                 const SizedBox(height: 12),
-                _LegCard(title: 'رحلة العودة', leg: flow.inbound!, quote: q.returnLeg!),
               ],
-              const SizedBox(height: 12),
+              TripSummaryCard(trip: flow.outbound!.trip, title: flow.inbound == null ? null : 'رحلة الذهاب'),
+              if (flow.inbound != null) ...[
+                const SizedBox(height: 12),
+                TripSummaryCard(trip: flow.inbound!.trip, title: 'رحلة العودة'),
+              ],
+              const SizedBox(height: 16),
               ZoolCard(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('الركاب', style: t.titleSmall),
-                    const SizedBox(height: 6),
+                    const Text('المسافرون والمقاعد المسجلة', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: ZoolColors.textStrong)),
+                    const SizedBox(height: 8),
                     for (var i = 0; i < flow.passengers.length; i++)
-                      InfoRow(
-                        flow.passengers[i].fullName.trim(),
-                        'مقعد ${[flow.outbound!.seats[i].label, if (flow.inbound != null) flow.inbound!.seats[i].label].join(' / ')}',
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(
+                          children: [
+                            Expanded(child: Text(flow.passengers[i].fullName.trim(), style: const TextStyle(fontSize: 14, color: ZoolColors.textStrong))),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(color: ZoolColors.secondarySoft, borderRadius: BorderRadius.circular(8)),
+                              child: Text(seatsOf(i), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: ZoolColors.brand)),
+                            ),
+                          ],
+                        ),
                       ),
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               ZoolCard(
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    InfoRow('إجمالي التذاكر (يُخصم من المحفظة)', formatSdg(q.grandTotalMinor), bold: true),
-                    InfoRow('عمولتك المكتسبة (تُسوّى لاحقًا)', formatSdg(q.grandCommissionMinor), valueColor: ZoolColors.secondary),
-                    const Divider(height: 20),
-                    InfoRow('الرصيد الحالي', formatSdg(q.walletBalanceMinor)),
-                    InfoRow(
-                      'الرصيد بعد الحجز',
-                      formatSdg(q.balanceAfterMinor),
-                      bold: true,
-                      valueColor: q.sufficientBalance ? ZoolColors.text : ZoolColors.error,
-                    ),
+                    const Text('ملخص الدفع والمحفظة', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: ZoolColors.textStrong)),
+                    const SizedBox(height: 8),
+                    InfoRow('قيمة التذاكر الإجمالية (${q.seatCount + (q.returnLeg?.seatCount ?? 0)} تذكرة):', formatSdg(q.grandTotalMinor)),
+                    InfoRow('عمولتك (تُسوّى لاحقًا):', '+${formatSdg(q.grandCommissionMinor)}', valueColor: ZoolColors.brand),
+                    const Divider(height: 18),
+                    InfoRow('رصيد المحفظة قبل الحجز:', formatSdg(q.walletBalanceMinor)),
+                    InfoRow('الرصيد المتوقع بعد الخصم:', formatSdg(q.balanceAfterMinor), valueColor: ZoolColors.primary),
+                    const Divider(height: 18),
+                    InfoRow('إجمالي الخصم من المحفظة:', formatSdg(q.grandTotalMinor), large: true, valueColor: ZoolColors.brand),
                   ],
                 ),
               ),
@@ -127,9 +151,9 @@ class _ReviewPageState extends ConsumerState<ReviewPage> {
                   color: ZoolColors.primarySoft,
                   child: Row(
                     children: [
-                      const Icon(Icons.warning_amber_rounded, color: ZoolColors.primary),
+                      const Icon(IconsaxPlusLinear.danger, color: ZoolColors.primary),
                       const SizedBox(width: 8),
-                      Expanded(child: Text(blocked, style: const TextStyle(color: ZoolColors.primary))),
+                      Expanded(child: Text(blocked, style: const TextStyle(color: ZoolColors.primary, fontSize: 13))),
                     ],
                   ),
                 ),
@@ -140,7 +164,7 @@ class _ReviewPageState extends ConsumerState<ReviewPage> {
                       await context.push('/top-up/new');
                       ref.invalidate(_quoteProvider);
                     },
-                    icon: const Icon(Icons.add_card_rounded),
+                    icon: const Icon(IconsaxPlusLinear.wallet_add),
                     label: const Text('شحن المحفظة'),
                   ),
                 ],
@@ -148,58 +172,6 @@ class _ReviewPageState extends ConsumerState<ReviewPage> {
             ],
           );
         },
-      ),
-      bottomNavigationBar: quote.value == null
-          ? null
-          : BottomActionBar(
-              child: PrimaryButton(
-                label: 'تأكيد الحجز · ${formatSdg(quote.value!.grandTotalMinor)}',
-                busy: _busy,
-                onPressed: quote.value!.sufficientBalance && quote.value!.withinCeiling ? _confirm : null,
-              ),
-            ),
-    );
-  }
-}
-
-class _LegCard extends StatelessWidget {
-  const _LegCard({required this.title, required this.leg, required this.quote});
-
-  final String title;
-  final LegSelection leg;
-  final BookingQuote quote;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = Theme.of(context).textTheme;
-    final trip = leg.trip;
-    return ZoolCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(child: Text(title, style: t.titleSmall)),
-              Text(trip.companyName, style: t.bodySmall),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(formatLongDate(trip.departureAt), style: t.bodySmall),
-          const SizedBox(height: 12),
-          RouteTimeline(
-            departureAt: trip.departureAt,
-            arrivalAt: trip.arrivalAt,
-            originCity: trip.origin.city,
-            destinationCity: trip.destination.city,
-            originStation: trip.origin.station,
-            destinationStation: trip.destination.station,
-            durationMinutes: trip.durationMinutes,
-          ),
-          const Divider(height: 24),
-          InfoRow('المقاعد', leg.seatLabels),
-          InfoRow('سعر التذكرة', formatSdg(quote.unitPriceMinor)),
-          InfoRow('الإجمالي (${quote.seatCount} تذكرة)', formatSdg(quote.totalMinor), bold: true),
-        ],
       ),
     );
   }

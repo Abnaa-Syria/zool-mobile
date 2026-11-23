@@ -4,17 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:zool_core/zool_core.dart';
 import 'package:zool_ui/zool_ui.dart';
 
-import '../../app/labels.dart';
 import '../../app/providers.dart';
 import '../../data/models.dart';
-import '../bookings/booking_tile.dart';
 
-final _recentProvider = FutureProvider.autoDispose<List<Booking>>((ref) async {
-  ref.watch(bookingsVersionProvider);
-  return (await ref.watch(apiProvider).bookings(tab: 'ACTIVE')).items.take(5).toList();
-});
-
-/// Home (3083:1840): employee and office, wallet balance, today's KPIs, new booking.
+/// Home (Figma 3083:1840): greeting + bell, today's sales, wallet balance, quick access.
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
@@ -22,76 +15,69 @@ class HomePage extends ConsumerWidget {
     ref.invalidate(dashboardProvider);
     ref.invalidate(walletProvider);
     ref.invalidate(unreadCountProvider);
-    ref.invalidate(_recentProvider);
     await ref.read(dashboardProvider.future).catchError((_) => <String, dynamic>{});
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final me = ref.watch(meProvider);
-    final t = Theme.of(context).textTheme;
-    return Scaffold(
+    final me = ref.watch(meProvider).value;
+    return ZoolPage(
+      header: BrokerGreeting(me: me),
       body: RefreshIndicator(
-        color: ZoolColors.secondary,
+        color: ZoolColors.brand,
         onRefresh: () => _refresh(ref),
         child: ListView(
-          padding: EdgeInsets.zero,
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
           children: [
-            GradientHeader(
-              child: Row(
-                children: [
-                  InitialsAvatar(me.value?.displayName ?? ''),
-                  const SizedBox(width: 12),
+            const _TodaySales(),
+            const SizedBox(height: 20),
+            const _WalletCard(),
+            const SizedBox(height: 20),
+            Text('الوصول السريع', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                if (me?.canBook ?? false) ...[
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('أهلًا، ${me.value?.displayName ?? ''}', style: t.titleMedium),
-                        Text(
-                          me.value == null ? '' : '${me.value!.officeName} · ${roleLabel(me.value!.role)}',
-                          style: t.bodySmall,
-                        ),
-                      ],
+                    child: QuickButton(
+                      label: 'حجز رحلة جديدة',
+                      icon: const Icon(IconsaxPlusBold.calendar_2, color: ZoolColors.secondary),
+                      onTap: () => context.go('/book'),
                     ),
                   ),
-                  const _NotificationsBell(),
+                  const SizedBox(width: 10),
                 ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const _WalletCard(),
-                  const SizedBox(height: 16),
-                  if (me.value?.canBook ?? false) ...[
-                    PrimaryButton(label: 'حجز جديد', icon: Icons.add_rounded, onPressed: () => context.push('/book')),
-                    const SizedBox(height: 20),
-                  ],
-                  const _TodayKpis(),
-                  const SizedBox(height: 20),
-                  SectionTitle(
-                    'آخر الحجوزات النشطة',
-                    action: TextButton(onPressed: () => context.go('/bookings'), child: const Text('عرض الكل')),
+                Expanded(
+                  child: QuickButton(
+                    label: 'إدارة الحجوزات',
+                    icon: const ZoolSvgIcon('bus_bold', color: ZoolColors.secondary),
+                    onTap: () => context.go('/bookings'),
                   ),
-                  Consumer(builder: (context, ref, _) {
-                    final recent = ref.watch(_recentProvider);
-                    return AsyncBody(
-                      value: recent,
-                      onRetry: () => ref.invalidate(_recentProvider),
-                      data: (items) => items.isEmpty
-                          ? const EmptyView(title: 'لا توجد حجوزات نشطة', icon: Icons.confirmation_number_outlined)
-                          : Column(
-                              children: [
-                                for (final b in items) ...[BookingTile(booking: b), const SizedBox(height: 10)],
-                              ],
-                            ),
-                    );
-                  }),
+                ),
+              ],
+            ),
+            if (me?.canTopUp ?? false) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: QuickButton(
+                      label: 'شحن المحفظة',
+                      icon: const Icon(IconsaxPlusBold.wallet_add, color: ZoolColors.secondary),
+                      onTap: () => context.push('/top-up/new'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: QuickButton(
+                      label: 'حركات المحفظة',
+                      icon: const Icon(IconsaxPlusBold.wallet_3, color: ZoolColors.secondary),
+                      onTap: () => context.push('/wallet'),
+                    ),
+                  ),
                 ],
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -99,26 +85,63 @@ class HomePage extends ConsumerWidget {
   }
 }
 
-class _NotificationsBell extends ConsumerWidget {
-  const _NotificationsBell();
+/// Avatar · «مرحباً، أحمد» · office, and the bell with an unread dot.
+class BrokerGreeting extends ConsumerWidget {
+  const BrokerGreeting({super.key, required this.me});
+
+  final BrokerMe? me;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final unread = ref.watch(unreadCountProvider).value ?? 0;
-    return IconButton(
-      tooltip: 'الإشعارات',
-      onPressed: () async {
+    return GreetingHeader(
+      name: me?.displayName ?? '',
+      subtitle: me?.officeName ?? '',
+      unread: unread > 0,
+      onBell: () async {
         await context.push('/notifications');
         ref.invalidate(unreadCountProvider);
       },
-      icon: Badge(
-        isLabelVisible: unread > 0,
-        label: Text(unread > 99 ? '99+' : '$unread'),
-        backgroundColor: ZoolColors.primary,
-        child: const Icon(Icons.notifications_none_rounded, color: ZoolColors.secondary, size: 28),
-      ),
     );
   }
+}
+
+class _TodaySales extends ConsumerWidget {
+  const _TodaySales();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final dash = ref.watch(dashboardProvider);
+    final d = dash.value;
+    final self = d?.str('scope') == 'SELF';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(self ? 'أداء مبيعاتك اليوم' : 'أداء المبيعات اليوم', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 10),
+        if (dash.hasError && d == null)
+          ZoolCard(child: ErrorView(error: dash.error!, onRetry: () => ref.invalidate(dashboardProvider)))
+        else
+          Row(
+            children: [
+              Expanded(child: StatTile(label: 'حجوزات اليوم', value: d == null ? '…' : _tickets(d.integer('ticketsSold')))),
+              const SizedBox(width: 10),
+              Expanded(child: StatTile(label: 'إجمالي المبيعات', value: d == null ? '…' : formatSdg(d.integer('grossSalesMinor')))),
+              const SizedBox(width: 10),
+              Expanded(
+                child: StatTile(
+                  label: 'العمولة',
+                  value: d == null ? '…' : formatSdg(d.integer('commissionAccruedMinor')),
+                  valueColor: ZoolColors.brand,
+                ),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  static String _tickets(int n) => n == 1 ? 'تذكرة' : (n == 2 ? 'تذكرتان' : (n >= 3 && n <= 10 ? '$n تذاكر' : '$n تذكرة'));
 }
 
 class _WalletCard extends ConsumerWidget {
@@ -127,78 +150,34 @@ class _WalletCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final wallet = ref.watch(walletProvider);
-    final t = Theme.of(context).textTheme;
     final w = wallet.value;
-    return ZoolCard(
-      color: ZoolColors.secondary,
-      onTap: () => context.go('/wallet'),
-      padding: const EdgeInsets.all(18),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return DecoratedBox(
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(ZoolRadii.bigCard), boxShadow: ZoolShadows.wallet),
+      child: ZoolCard(
+        color: ZoolColors.brand,
+        radius: ZoolRadii.bigCard,
+        padding: const EdgeInsets.all(16),
+        onTap: () => context.push('/wallet'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Text('رصيد المحفظة', style: t.bodyMedium?.copyWith(color: Colors.white70)),
-                const SizedBox(height: 6),
-                if (wallet.hasError && w == null)
-                  Text('تعذّر التحميل — اضغط للمحاولة', style: t.bodyMedium?.copyWith(color: Colors.white))
-                else
-                  Text(
-                    w == null ? '…' : formatSdg(w.integer('balanceMinor')),
-                    style: t.titleLarge?.copyWith(color: Colors.white, fontSize: 24),
-                  ),
-                if (w != null && w.flag('lowBalance')) ...[
-                  const SizedBox(height: 8),
-                  const StatusBadge('الرصيد منخفض — اشحن المحفظة', tone: BadgeTone.warning),
-                ],
+                const Expanded(child: Text('الرصيد الحالي للمكتب', style: TextStyle(fontSize: 13, color: Color(0xB3E8F5EE)))),
+                if (w != null && w.flag('lowBalance')) const StatusBadge('الرصيد منخفض', tone: BadgeTone.warning),
               ],
             ),
-          ),
-          const Icon(Icons.account_balance_wallet_rounded, color: Colors.white, size: 36),
-        ],
-      ),
-    );
-  }
-}
-
-class _TodayKpis extends ConsumerWidget {
-  const _TodayKpis();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final dash = ref.watch(dashboardProvider);
-    final d = dash.value;
-    final scope = d?.str('scope') == 'OFFICE' ? 'المكتب' : 'مبيعاتك';
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SectionTitle('اليوم ($scope)'),
-        if (dash.hasError && d == null)
-          ErrorView(error: dash.error!, onRetry: () => ref.invalidate(dashboardProvider))
-        else
-          GridView(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              mainAxisExtent: 76,
-            ),
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            children: [
-              KpiTile(label: 'الحجوزات', value: d == null ? '…' : '${d.integer('bookingsCount')}', icon: Icons.receipt_long_rounded),
-              KpiTile(label: 'التذاكر المباعة', value: d == null ? '…' : '${d.integer('ticketsSold')}', icon: Icons.confirmation_number_rounded),
-              KpiTile(label: 'المبيعات', value: d == null ? '…' : formatSdg(d.integer('grossSalesMinor')), icon: Icons.payments_rounded),
-              KpiTile(
-                label: 'العمولة المكتسبة',
-                value: d == null ? '…' : formatSdg(d.integer('commissionAccruedMinor')),
-                icon: Icons.percent_rounded,
-                color: ZoolColors.primary,
+            const SizedBox(height: 12),
+            if (wallet.hasError && w == null)
+              Text(errorMessage(wallet.error), style: const TextStyle(color: Colors.white, fontSize: 14))
+            else
+              Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: MoneyText(w == null ? '…' : formatSdg(w.integer('balanceMinor')), size: 32, color: Colors.white, currencyColor: ZoolColors.background),
               ),
-            ],
-          ),
-      ],
+          ],
+        ),
+      ),
     );
   }
 }

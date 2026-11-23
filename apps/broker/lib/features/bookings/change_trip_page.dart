@@ -113,8 +113,8 @@ class _ChangeTripPageState extends ConsumerState<ChangeTripPage> {
   Widget build(BuildContext context) {
     final booking = ref.watch(bookingProvider(widget.bookingId));
     final t = Theme.of(context).textTheme;
-    return Scaffold(
-      appBar: AppBar(title: const Text('تغيير موعد الرحلة')),
+    return ZoolPage(
+      title: 'تغيير موعد الرحلة',
       body: AsyncBody(
         value: booking,
         onRetry: () => ref.invalidate(bookingProvider(widget.bookingId)),
@@ -140,7 +140,7 @@ class _ChangeTripPageState extends ConsumerState<ChangeTripPage> {
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: () => _pickDate(b),
-                icon: const Icon(Icons.calendar_today_rounded),
+                icon: const Icon(IconsaxPlusLinear.calendar_1),
                 label: Text(formatCalendarDate(date)),
               ),
               const SizedBox(height: 16),
@@ -150,7 +150,7 @@ class _ChangeTripPageState extends ConsumerState<ChangeTripPage> {
                 data: (list) {
                   final usable = list.where((o) => o.id != b.tripId).toList();
                   if (usable.isEmpty) {
-                    return const EmptyView(title: 'لا توجد رحلات بديلة في هذا اليوم', message: 'جرّب يومًا آخر.', icon: Icons.event_busy_rounded);
+                    return const EmptyView(title: 'لا توجد رحلات بديلة في هذا اليوم', message: 'جرّب يومًا آخر.', icon: IconsaxPlusLinear.calendar_remove);
                   }
                   return Column(
                     children: [
@@ -194,7 +194,7 @@ class _ChangeTripPageState extends ConsumerState<ChangeTripPage> {
                 children: [
                   Row(
                     children: [
-                      IconButton(onPressed: () => setState(() => _option = null), icon: const Icon(Icons.arrow_forward_rounded)),
+                      IconButton(onPressed: () => setState(() => _option = null), icon: const Icon(IconsaxPlusLinear.arrow_right_3)),
                       Expanded(child: Text('${formatDateTime(trip.departureAt)} · اختر $needed مقعد', style: Theme.of(context).textTheme.titleSmall)),
                     ],
                   ),

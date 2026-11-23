@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zool_ui/zool_ui.dart';
 
-/// Booking confirmed: open the booking (tickets with QR) or start another booking.
+/// Booking confirmed: open the tickets or start another booking.
 class SuccessPage extends StatelessWidget {
   const SuccessPage({super.key, required this.bookingId, this.returnBookingId});
 
@@ -11,42 +11,43 @@ class SuccessPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = Theme.of(context).textTheme;
-    return Scaffold(
-      body: SafeArea(
+    return ZoolPage(
+      bottomBar: ZoolBottomBar(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            PrimaryButton(label: 'عرض التذاكر', onPressed: () => _open(context, bookingId)),
+            if (returnBookingId != null) ...[
+              const SizedBox(height: 10),
+              OutlinedButton(onPressed: () => _open(context, returnBookingId!), child: const Text('تذاكر رحلة العودة')),
+            ],
+            const SizedBox(height: 10),
+            OutlinedButton(onPressed: () => context.go('/book'), child: const Text('حجز جديد')),
+          ],
+        ),
+      ),
+      body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const Spacer(),
               Container(
                 width: 96,
                 height: 96,
-                decoration: const BoxDecoration(color: ZoolColors.secondarySoft, shape: BoxShape.circle),
-                child: const Icon(Icons.check_rounded, color: ZoolColors.secondary, size: 56),
+                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                child: const Icon(IconsaxPlusBold.tick_circle, color: ZoolColors.brand, size: 60),
               ),
               const SizedBox(height: 20),
-              Text('تم تأكيد الحجز', style: t.titleLarge),
+              const Text('تم تأكيد الحجز', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: ZoolColors.textStrong)),
               const SizedBox(height: 8),
               Text(
                 returnBookingId == null
-                    ? 'خُصم المبلغ من محفظة المكتب وأُضيفت العمولة لحسابك. التذاكر جاهزة.'
-                    : 'تم حجز رحلتي الذهاب والعودة. التذاكر جاهزة لكل رحلة.',
-                style: t.bodyMedium?.copyWith(color: ZoolColors.textSecondary),
+                    ? 'خُصم المبلغ من محفظة المكتب وأُضيفت العمولة لحسابك. أرسل التذاكر للمسافرين من صفحة الحجز.'
+                    : 'تم حجز رحلتي الذهاب والعودة. أرسل تذاكر كل رحلة للمسافرين من صفحة الحجز.',
+                style: const TextStyle(fontSize: 14, color: ZoolColors.textSecondary, height: 1.6),
                 textAlign: TextAlign.center,
               ),
-              const Spacer(),
-              PrimaryButton(label: 'عرض التذاكر', onPressed: () => _open(context, bookingId)),
-              if (returnBookingId != null) ...[
-                const SizedBox(height: 10),
-                OutlinedButton(onPressed: () => _open(context, returnBookingId!), child: const Text('تذاكر رحلة العودة')),
-              ],
-              const SizedBox(height: 10),
-              OutlinedButton(onPressed: () {
-                  context.go('/');
-                  GoRouter.of(context).push('/book');
-                }, child: const Text('حجز جديد')),
-              TextButton(onPressed: () => context.go('/'), child: const Text('الرئيسية')),
             ],
           ),
         ),
