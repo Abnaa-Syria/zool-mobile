@@ -18,6 +18,8 @@ class PagedList<T> extends StatefulWidget {
     this.padding = const EdgeInsets.all(16),
     this.separator = 10,
     this.header,
+    this.groupBy,
+    this.groupHeader,
   });
 
   final Future<PageResult<T>> Function(int page) fetch;
@@ -27,6 +29,10 @@ class PagedList<T> extends StatefulWidget {
   final EdgeInsetsGeometry padding;
   final double separator;
   final Widget? header;
+
+  /// Group label of an item (e.g. its day); a header is shown where the group changes.
+  final String Function(T item)? groupBy;
+  final Widget Function(BuildContext context, String group)? groupHeader;
 
   @override
   State<PagedList<T>> createState() => _PagedListState<T>();
@@ -110,7 +116,21 @@ class _PagedListState<T> extends State<PagedList<T>> {
           itemBuilder: (context, i) {
             if (i < extra) return header!;
             final idx = i - extra;
-            if (idx < _items.length) return widget.itemBuilder(context, _items[idx]);
+            if (idx < _items.length) {
+              final item = widget.itemBuilder(context, _items[idx]);
+              final groupBy = widget.groupBy;
+              if (groupBy == null) return item;
+              final g = groupBy(_items[idx]);
+              if (idx > 0 && groupBy(_items[idx - 1]) == g) return item;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  widget.groupHeader?.call(context, g) ??
+                      Padding(padding: const EdgeInsets.only(bottom: 6, top: 4), child: Text(g, style: const TextStyle(fontSize: 12, color: ZoolColors.textMuted))),
+                  item,
+                ],
+              );
+            }
             if (_error != null) {
               return TextButton(onPressed: _loadMore, child: const Text('تعذّر تحميل المزيد — إعادة المحاولة'));
             }

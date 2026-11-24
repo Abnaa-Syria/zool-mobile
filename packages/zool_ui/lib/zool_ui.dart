@@ -10,5 +10,6 @@ export 'src/widgets/paged_list.dart';
 export 'src/widgets/seat_map.dart';
 export 'src/widgets/states.dart';
 export 'src/widgets/ticket_card.dart';
+export 'src/widgets/trip_search.dart';
 export 'src/widgets/trip_widgets.dart';
 export 'package:iconsax_plus/iconsax_plus.dart';

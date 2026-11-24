@@ -12,7 +12,7 @@ class LoginPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(sessionProvider);
     return OtpLoginScreen(
-      title: 'تسجيل دخول الوكيل',
+      badge: 'تطبيق مكاتب الوكلاء',
       subtitle: 'أدخل رقم الجوال المسجّل لمكتبك لدى زول قو',
       onRequest: session.requestOtp,
       onVerify: (phone, code, challengeId) async {

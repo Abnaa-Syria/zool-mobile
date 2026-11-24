@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:zool_core/zool_core.dart';
 import 'package:zool_ui/zool_ui.dart';
 
-import '../../app/amenity_icons.dart';
 import '../../app/providers.dart';
 import '../../data/models.dart';
 

@@ -9,8 +9,8 @@ screen-to-API map live in the backend repository (`docs/APP_DEVELOPER_GUIDE.md`,
 | `packages/zool_core` | API client (envelope, errors, one shared token refresh), OTP auth sessions, money / Sudan-time / phone formatting, Arabic error messages | ✅ |
 | `packages/zool_ui` | Brand theme from the Figma file (RTL Arabic, Cairo, mint background, Iconsax icons) and shared widgets: OTP login, seat map, hold countdown, QR ticket, route timeline, paged list, states, dialogs | ✅ |
 | `apps/broker` | Agent-office app — `com.zoolgo.broker` | ✅ |
-| `apps/customer` | Customer app — `com.zoolgo.customer` | next |
-| `apps/driver` | Driver app — `com.zoolgo.driver` | after the customer app |
+| `apps/customer` | Customer app — `com.zoolgo.customer` | ✅ |
+| `apps/driver` | Driver app — `com.zoolgo.driver` | next |
 
 ## Run
 
@@ -40,9 +40,11 @@ flutter run --dart-define=API_BASE_URL=http://10.0.2.2:4000/api/v1   # local bac
 flutter analyze                       # whole workspace
 (cd packages/zool_core && flutter test)
 (cd apps/broker && flutter test)      # logic, app boot, screen rendering (fails on layout overflow)
+(cd apps/customer && flutter test)
 
 # Contract test against a running dev backend (books one seat and cancels it):
 (cd apps/broker && LIVE_API=http://localhost:4000/api/v1 flutter test test/live_api_test.dart)
+(cd apps/customer && LIVE_API=http://localhost:4000/api/v1 flutter test test/live_api_test.dart)
 
 # Review screenshots of the main screens → apps/broker/test/_screens/*.png (not committed)
 (cd apps/broker && flutter test test/screens_test.dart --update-goldens)

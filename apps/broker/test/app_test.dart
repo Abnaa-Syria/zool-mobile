@@ -14,13 +14,13 @@ void main() {
       child: BrokerApp(session: session),
     ));
     await tester.pumpAndSettle();
-    expect(find.text('تسجيل دخول الوكيل'), findsOneWidget);
-    expect(find.text('إرسال رمز التحقق'), findsOneWidget);
-    expect(Directionality.of(tester.element(find.text('تسجيل دخول الوكيل'))), TextDirection.rtl);
+    expect(find.text('أدخل رقم هاتفك'), findsOneWidget);
+    expect(find.text('تطبيق مكاتب الوكلاء'), findsOneWidget);
+    expect(Directionality.of(tester.element(find.text('أدخل رقم هاتفك'))), TextDirection.rtl);
 
     // Invalid phone shows the Arabic validation message without calling the API.
     await tester.enterText(find.byType(TextField), '123');
-    await tester.tap(find.text('إرسال رمز التحقق'));
+    await tester.tap(find.text('التالي'));
     await tester.pump();
     expect(find.textContaining('أدخل رقم جوال صحيحًا'), findsOneWidget);
   });

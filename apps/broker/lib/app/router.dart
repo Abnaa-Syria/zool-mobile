@@ -43,7 +43,7 @@ GoRouter buildRouter(AuthSession session) {
       }
     },
     routes: [
-      GoRoute(path: '/splash', builder: (_, _) => const Scaffold(body: Center(child: ZoolLogo(size: 88)))),
+      GoRoute(path: '/splash', builder: (_, _) => const Scaffold(body: Center(child: ZoolWordmark()))),
       GoRoute(path: '/login', builder: (_, _) => const LoginPage()),
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => BrokerShell(shell: shell),

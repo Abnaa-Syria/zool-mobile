@@ -2,30 +2,34 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:zool_core/zool_core.dart';
 
 import '../theme.dart';
 import 'basics.dart';
 
-/// Phone + OTP login shared by the three apps (phone only, +249 by default).
+/// Phone + OTP login from the design (Figma 3074:2136): ZOOL GO wordmark, «أدخل رقم هاتفك»,
+/// +249 chip and phone field, «التالي». Phone only (no email tab in v1). Shared by the three apps.
 ///
 /// [onRequest] calls `POST …/otp/request` and returns its data (`challengeId`, `cooldownSeconds`,
 /// `devOtp` in development); [onVerify] signs in.
 class OtpLoginScreen extends StatefulWidget {
   const OtpLoginScreen({
     super.key,
-    required this.title,
-    required this.subtitle,
     required this.onRequest,
     required this.onVerify,
-    this.logo,
+    this.title = 'أدخل رقم هاتفك',
+    this.subtitle = 'سنرسل لك رمز التحقق للتأكيد',
+    this.badge,
   });
 
   final String title;
   final String subtitle;
+
+  /// Small label under the logo (e.g. «تطبيق الوكلاء»).
+  final String? badge;
   final Future<Json> Function(String phone) onRequest;
   final Future<void> Function(String phone, String code, String? challengeId) onVerify;
-  final Widget? logo;
 
   @override
   State<OtpLoginScreen> createState() => _OtpLoginScreenState();
@@ -106,119 +110,188 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
     }
   }
 
+  static final _glass = BoxDecoration(
+    color: Colors.white.withValues(alpha: 0.6),
+    border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
+    borderRadius: BorderRadius.circular(ZoolRadii.button),
+  );
+
   @override
   Widget build(BuildContext context) {
-    final t = Theme.of(context).textTheme;
     final codeStep = _normalized != null;
     return Scaffold(
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-          children: [
-            Center(child: widget.logo ?? const ZoolLogo(size: 76)),
-            const SizedBox(height: 28),
-            Text(codeStep ? 'رمز التحقق' : widget.title, style: t.titleLarge, textAlign: TextAlign.center),
-            const SizedBox(height: 8),
-            Text(
-              codeStep ? 'أدخل الرمز المرسل إلى ${formatPhone(_normalized)}' : widget.subtitle,
-              style: t.bodyMedium?.copyWith(color: ZoolColors.textSecondary),
-              textAlign: TextAlign.center,
+      backgroundColor: ZoolColors.background,
+      body: Stack(
+        children: [
+          Positioned(
+            top: MediaQuery.sizeOf(context).height * 0.057,
+            left: 0,
+            right: 0,
+            child: IgnorePointer(
+              child: SvgPicture.asset('assets/icons/login_decor.svg', package: 'zool_ui', width: MediaQuery.sizeOf(context).width, fit: BoxFit.fitWidth),
             ),
-            const SizedBox(height: 28),
-            if (!codeStep)
-              Directionality(
-                textDirection: TextDirection.ltr,
-                child: TextField(
-                  controller: _phone,
-                  keyboardType: TextInputType.phone,
-                  autofillHints: const [AutofillHints.telephoneNumberNational],
-                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9٠-٩+ ]')), LengthLimitingTextInputFormatter(16)],
-                  style: const TextStyle(fontSize: 18, letterSpacing: 1),
-                  decoration: const InputDecoration(
-                    prefixText: '+249  ',
-                    hintText: '9XXXXXXXX',
-                    labelText: 'رقم الجوال',
+          ),
+          SafeArea(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 40, 20, 24),
+              children: [
+                const Center(child: ZoolWordmark()),
+                if (widget.badge != null) ...[
+                  const SizedBox(height: 10),
+                  Center(child: StatusBadge(widget.badge!, tone: BadgeTone.brand)),
+                ],
+                const SizedBox(height: 32),
+                Text(
+                  codeStep ? 'رمز التحقق' : widget.title,
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: ZoolColors.textStrong, height: 1.5),
+                ),
+                Text(
+                  codeStep ? 'أدخل الرمز المرسل إلى ${formatPhone(_normalized)}' : widget.subtitle,
+                  style: const TextStyle(fontSize: 14, color: ZoolColors.textStrong),
+                ),
+                const SizedBox(height: 24),
+                if (!codeStep)
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 96,
+                          height: 48,
+                          decoration: _glass,
+                          alignment: Alignment.center,
+                          child: const Text('🇸🇩  +249', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: ZoolColors.textStrong)),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Container(
+                            height: 48,
+                            decoration: _glass,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            alignment: Alignment.center,
+                            child: TextField(
+                              controller: _phone,
+                              keyboardType: TextInputType.phone,
+                              autofillHints: const [AutofillHints.telephoneNumberNational],
+                              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9٠-٩+ ]')), LengthLimitingTextInputFormatter(16)],
+                              style: const TextStyle(fontSize: 16, letterSpacing: 0.5),
+                              decoration: const InputDecoration(
+                                hintText: '9XX XXX XXX',
+                                filled: false,
+                                border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                                isDense: true,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                              onSubmitted: (_) => _request(),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else ...[
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Container(
+                      height: 56,
+                      decoration: _glass,
+                      alignment: Alignment.center,
+                      child: TextField(
+                        controller: _code,
+                        autofocus: true,
+                        keyboardType: TextInputType.number,
+                        autofillHints: const [AutofillHints.oneTimeCode],
+                        textAlign: TextAlign.center,
+                        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9٠-٩]')), LengthLimitingTextInputFormatter(8)],
+                        style: const TextStyle(fontSize: 24, letterSpacing: 10, fontWeight: FontWeight.w700),
+                        decoration: const InputDecoration(
+                          hintText: '••••••',
+                          filled: false,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                        ),
+                        onSubmitted: (_) => _verify(),
+                      ),
+                    ),
                   ),
-                  onSubmitted: (_) => _request(),
-                ),
-              )
-            else ...[
-              Directionality(
-                textDirection: TextDirection.ltr,
-                child: TextField(
-                  controller: _code,
-                  autofocus: true,
-                  keyboardType: TextInputType.number,
-                  autofillHints: const [AutofillHints.oneTimeCode],
-                  textAlign: TextAlign.center,
-                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9٠-٩]')), LengthLimitingTextInputFormatter(8)],
-                  style: const TextStyle(fontSize: 24, letterSpacing: 10, fontWeight: FontWeight.w700),
-                  decoration: const InputDecoration(hintText: '••••••'),
-                  onSubmitted: (_) => _verify(),
-                ),
-              ),
-              if (_devOtp != null) ...[
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () => setState(() => _code.text = _devOtp!),
-                  child: Text('بيئة التطوير: استخدم الرمز $_devOtp'),
-                ),
-              ],
-            ],
-            if (_error != null) ...[
-              const SizedBox(height: 12),
-              Text(_error!, style: const TextStyle(color: ZoolColors.error), textAlign: TextAlign.center),
-            ],
-            const SizedBox(height: 24),
-            PrimaryButton(label: codeStep ? 'تأكيد' : 'إرسال رمز التحقق', busy: _busy, onPressed: codeStep ? _verify : _request),
-            if (codeStep) ...[
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  TextButton(
-                    onPressed: _busy || _cooldown > 0 ? null : _request,
-                    child: Text(_cooldown > 0 ? 'إعادة الإرسال بعد $_cooldown ث' : 'إعادة إرسال الرمز'),
-                  ),
-                  TextButton(
-                    onPressed: _busy
-                        ? null
-                        : () => setState(() {
-                              _normalized = null;
-                              _error = null;
-                            }),
-                    child: const Text('تغيير الرقم'),
+                  if (_devOtp != null) ...[
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: () => setState(() => _code.text = _devOtp!),
+                      child: Text('بيئة التطوير: استخدم الرمز $_devOtp'),
+                    ),
+                  ],
+                ],
+                if (_error != null) ...[
+                  const SizedBox(height: 12),
+                  Text(_error!, style: const TextStyle(color: ZoolColors.error, fontSize: 13)),
+                ],
+                const SizedBox(height: 24),
+                PrimaryButton(label: codeStep ? 'تأكيد' : 'التالي', busy: _busy, onPressed: codeStep ? _verify : _request),
+                if (codeStep) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      TextButton(
+                        onPressed: _busy || _cooldown > 0 ? null : _request,
+                        child: Text(_cooldown > 0 ? 'إعادة الإرسال بعد $_cooldown ث' : 'إعادة إرسال الرمز'),
+                      ),
+                      TextButton(
+                        onPressed: _busy
+                            ? null
+                            : () => setState(() {
+                                  _normalized = null;
+                                  _error = null;
+                                }),
+                        child: const Text('تغيير الرقم'),
+                      ),
+                    ],
                   ),
                 ],
-              ),
-            ],
-          ],
-        ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-/// Brand mark: the ZoolGo bus in a green rounded square (no image asset needed).
-class ZoolLogo extends StatelessWidget {
-  const ZoolLogo({super.key, this.size = 64});
+/// The ZOOL GO wordmark from the design (two SVG parts, LTR).
+class ZoolWordmark extends StatelessWidget {
+  const ZoolWordmark({super.key, this.height = 39});
 
-  final double size;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(color: ZoolColors.secondary, borderRadius: BorderRadius.circular(size * 0.28)),
-          child: Icon(Icons.directions_bus_filled_rounded, color: Colors.white, size: size * 0.56),
-        ),
-        const SizedBox(height: 8),
-        Text('زول قو', style: TextStyle(fontSize: size * 0.3, fontWeight: FontWeight.w700, color: ZoolColors.secondary)),
-      ],
+    final scale = height / 39.117;
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SvgPicture.asset('assets/icons/logo_zool.svg', package: 'zool_ui', width: 152.054 * scale, height: 39.117 * scale),
+          SizedBox(width: 12.75 * scale),
+          SvgPicture.asset('assets/icons/logo_go.svg', package: 'zool_ui', width: 77.198 * scale, height: 38.53 * scale),
+        ],
+      ),
     );
   }
+}
+
+/// The ZG brand mark (onboarding / splash).
+class ZoolLogo extends StatelessWidget {
+  const ZoolLogo({super.key, this.size = 64});
+
+  /// Width of the mark (its height is 65 %).
+  final double size;
+
+  @override
+  Widget build(BuildContext context) =>
+      SvgPicture.asset('assets/icons/logo_mark.svg', package: 'zool_ui', width: size, height: size * 0.65);
 }

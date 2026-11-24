@@ -1,0 +1,21 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:zool_ui/zool_ui.dart';
+
+import 'flow.dart';
+
+/// C9 — the seat hold ran out: explain, drop the holds, back to the outbound results.
+Future<void> onHoldExpired(BuildContext context, WidgetRef ref) async {
+  await showInfoDialog(
+    context,
+    title: 'انتهت مدة حجز المقاعد',
+    message: 'انتهت المهلة المؤقتة للمقاعد المختارة. اختر المقاعد مرة أخرى لإكمال الحجز.',
+    button: 'اختيار المقاعد',
+  );
+  if (!context.mounted) return;
+  ref.read(bookingFlowProvider.notifier).clearLegs();
+  final router = GoRouter.of(context);
+  router.go('/');
+  router.push('/results/outbound');
+}

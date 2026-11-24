@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:iconsax_plus/iconsax_plus.dart';
 import 'package:zool_core/zool_core.dart';
 
 import '../theme.dart';
@@ -253,3 +254,16 @@ class _HoldCountdownState extends State<HoldCountdown> {
     );
   }
 }
+
+/// Amenity code (wifi, ac, usb, wc, snack, tv, luggage, vip_seats) → Iconsax icon.
+IconData amenityIcon(String code) => switch (code) {
+      'wifi' => IconsaxPlusLinear.wifi,
+      'ac' => IconsaxPlusLinear.wind,
+      'usb' => IconsaxPlusLinear.flash_1,
+      'snack' => IconsaxPlusLinear.coffee,
+      'tv' => IconsaxPlusLinear.monitor,
+      'luggage' => IconsaxPlusLinear.box_1,
+      'vip_seats' => IconsaxPlusLinear.shield,
+      'wc' => IconsaxPlusLinear.drop,
+      _ => IconsaxPlusLinear.tick_circle,
+    };

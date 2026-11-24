@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:zool_core/zool_core.dart';
 import 'package:zool_ui/zool_ui.dart';
 
-import '../../app/amenity_icons.dart';
 import '../../data/models.dart';
 
 /// Results card (Figma 3083:2001): carrier, date, timeline, amenities, seats left, price,
