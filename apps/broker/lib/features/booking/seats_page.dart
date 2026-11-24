@@ -122,7 +122,7 @@ class _SeatsPageState extends ConsumerState<SeatsPage> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: PrimaryButton(
-                      label: _selected.length == needed ? 'متابعة' : 'اختر ${needed - _selected.length} مقعد',
+                      label: _selected.length == needed ? 'متابعة' : pickSeatsLabel(needed - _selected.length),
                       busy: _busy,
                       onPressed: _selected.length == needed ? () => _continue(trip) : null,
                     ),

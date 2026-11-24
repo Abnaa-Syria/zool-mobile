@@ -72,7 +72,7 @@ class BookingDetailPage extends ConsumerWidget {
                     child: OutlinedButton.icon(
                       onPressed: () => _showChangeMenu(context, ref, b),
                       icon: const Icon(IconsaxPlusLinear.edit_2, size: 20),
-                      label: const Text('تعديل الحجز'),
+                      label: FittedBox(fit: BoxFit.scaleDown, child: Text('تعديل الحجز')),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -81,7 +81,7 @@ class BookingDetailPage extends ConsumerWidget {
                       style: OutlinedButton.styleFrom(foregroundColor: ZoolColors.error, side: const BorderSide(color: ZoolColors.error)),
                       onPressed: () => _cancel(context, ref, b),
                       icon: const Icon(IconsaxPlusLinear.close_circle, size: 20),
-                      label: const Text('إلغاء الحجز'),
+                      label: FittedBox(fit: BoxFit.scaleDown, child: Text('إلغاء الحجز')),
                     ),
                   ),
                 ],
@@ -269,7 +269,7 @@ class _PassengerTicket extends ConsumerWidget {
                   child: OutlinedButton.icon(
                     onPressed: () => context.push('/booking/${booking.id}/ticket/${Uri.encodeComponent(ticket.ticketNumber)}'),
                     icon: const Icon(IconsaxPlusLinear.scan_barcode, size: 18),
-                    label: const Text('عرض رمز QR'),
+                    label: FittedBox(fit: BoxFit.scaleDown, child: Text('عرض رمز QR')),
                   ),
                 ),
                 const SizedBox(width: 10),

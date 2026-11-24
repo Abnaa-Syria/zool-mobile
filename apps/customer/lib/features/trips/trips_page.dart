@@ -141,7 +141,7 @@ class _Actions extends ConsumerWidget {
             child: FilledButton.icon(
               onPressed: () => showRatingSheet(context, ref, b),
               icon: const Icon(IconsaxPlusLinear.star_1, size: 18),
-              label: const Text('قيّم الرحلة'),
+              label: FittedBox(fit: BoxFit.scaleDown, child: Text('قيّم الرحلة')),
             ),
           )
         else if (b.rating != null)
@@ -151,7 +151,7 @@ class _Actions extends ConsumerWidget {
           child: OutlinedButton.icon(
             onPressed: () => context.go('/'),
             icon: const Icon(IconsaxPlusLinear.repeat, size: 18),
-            label: const Text('احجز مجددًا'),
+            label: FittedBox(fit: BoxFit.scaleDown, child: Text('احجز مجددًا')),
           ),
         ),
       ]);
@@ -168,7 +168,7 @@ class _Actions extends ConsumerWidget {
                   ? context.push('/booking/${b.id}/ticket/${Uri.encodeComponent(tickets.first.ticketNumber)}')
                   : context.push('/booking/${b.id}'),
           icon: const Icon(IconsaxPlusLinear.scan_barcode, size: 18),
-          label: Text(tickets.length > 1 ? 'عرض التذاكر' : 'عرض التذكرة'),
+          label: FittedBox(fit: BoxFit.scaleDown, child: Text(tickets.length > 1 ? 'عرض التذاكر' : 'عرض التذكرة')),
         ),
       ),
       const SizedBox(width: 10),
@@ -176,7 +176,7 @@ class _Actions extends ConsumerWidget {
         child: OutlinedButton.icon(
           onPressed: () => context.push('/booking/${b.id}'),
           icon: const Icon(IconsaxPlusLinear.edit_2, size: 18),
-          label: const Text('تعديل الرحلة'),
+          label: FittedBox(fit: BoxFit.scaleDown, child: Text('تعديل الرحلة')),
         ),
       ),
     ]);

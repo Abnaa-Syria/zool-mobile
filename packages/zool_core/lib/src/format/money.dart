@@ -56,4 +56,7 @@ String seatsLabel(int n) => n == 0 ? 'لا مقاعد' : countLabel(n, one: 'م�
 
 String ticketsLabel(int n) => n == 0 ? '0 تذاكر' : countLabel(n, one: 'تذكرة واحدة', two: 'تذكرتان', few: 'تذاكر', many: 'تذكرة');
 
+/// "اختر مقعدًا" / "اختر مقعدين" / "اختر 3 مقاعد".
+String pickSeatsLabel(int n) => n == 1 ? 'اختر مقعدًا' : (n == 2 ? 'اختر مقعدين' : 'اختر ${seatsLabel(n)}');
+
 String travellersLabel(int n) => countLabel(n, one: 'مسافر واحد', two: 'مسافران', few: 'مسافرين', many: 'مسافرًا');

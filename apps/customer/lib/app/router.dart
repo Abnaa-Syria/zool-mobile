@@ -41,7 +41,7 @@ GoRouter buildRouter(AuthSession session, AppFlags flags) {
           return loc == '/splash' ? null : '/splash';
         case AuthStatus.signedOut:
           final entry = flags.onboardingSeen ? '/login' : '/onboarding';
-          return loc == '/login' || loc == '/onboarding' ? null : entry;
+          return loc == entry ? null : entry;
         case AuthStatus.signedIn:
           if (flags.needsName) return loc == '/welcome' ? null : '/welcome';
           return _public.contains(loc) || loc == '/welcome' ? '/' : null;

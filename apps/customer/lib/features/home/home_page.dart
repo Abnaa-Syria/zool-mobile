@@ -216,8 +216,11 @@ class _Popular extends ConsumerWidget {
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             Text(d.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white)),
-                            const Text('بداية من', style: TextStyle(fontSize: 11, color: Colors.white70)),
-                            Text(formatSdg(d.fromPriceMinor), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF7BE0A5))),
+                            if (d.fromPriceMinor > 0) ...[
+                              const Text('بداية من', style: TextStyle(fontSize: 11, color: Colors.white70)),
+                              Text(formatSdg(d.fromPriceMinor), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF7BE0A5))),
+                            ] else
+                              const Text('رحلات قريبًا', style: TextStyle(fontSize: 12, color: Colors.white70)),
                           ],
                         ),
                       ),

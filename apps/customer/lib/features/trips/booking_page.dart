@@ -130,7 +130,7 @@ class BookingPage extends ConsumerWidget {
                               style: OutlinedButton.styleFrom(foregroundColor: ZoolColors.error, side: const BorderSide(color: ZoolColors.error)),
                               onPressed: () => _cancel(context, ref, b),
                               icon: const Icon(IconsaxPlusLinear.close_circle, size: 20),
-                              label: const Text('إلغاء الحجز'),
+                              label: FittedBox(fit: BoxFit.scaleDown, child: Text('إلغاء الحجز')),
                             ),
                           ),
                       ]),
@@ -254,7 +254,7 @@ class _TicketRow extends ConsumerWidget {
               child: FilledButton.icon(
                 onPressed: () => context.push('/booking/${booking.id}/ticket/${Uri.encodeComponent(ticket.ticketNumber)}'),
                 icon: const Icon(IconsaxPlusLinear.scan_barcode, size: 18),
-                label: const Text('عرض التذكرة'),
+                label: FittedBox(fit: BoxFit.scaleDown, child: Text('عرض التذكرة')),
               ),
             ),
             const SizedBox(width: 10),
@@ -262,7 +262,7 @@ class _TicketRow extends ConsumerWidget {
               child: OutlinedButton.icon(
                 onPressed: () => shareTicket(context, ref, booking, ticket),
                 icon: const Icon(IconsaxPlusLinear.export_1, size: 18),
-                label: const Text('مشاركة'),
+                label: FittedBox(fit: BoxFit.scaleDown, child: Text('مشاركة')),
               ),
             ),
           ]),

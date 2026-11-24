@@ -32,10 +32,10 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   }
 
   Future<void> _finish() async {
+    ref.read(appFlagsProvider).onboardingSeen = true;
     try {
       await (await SharedPreferences.getInstance()).setBool(kOnboardingSeenKey, true);
     } catch (_) {}
-    ref.read(appFlagsProvider).onboardingSeen = true;
   }
 
   @override
