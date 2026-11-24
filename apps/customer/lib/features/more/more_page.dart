@@ -111,6 +111,7 @@ class MorePage extends ConsumerWidget {
           ]),
           const SizedBox(height: 12),
           _Menu(children: [
+            _MenuRow(icon: IconsaxPlusLinear.heart, label: 'المفضلة', onTap: () => context.push('/favorites')),
             _MenuRow(icon: IconsaxPlusLinear.wallet_3, label: 'طرق الدفع', onTap: () => context.push('/payment-methods')),
             _MenuRow(
               icon: IconsaxPlusLinear.notification,

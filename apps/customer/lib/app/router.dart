@@ -14,6 +14,7 @@ import '../features/booking/seats_page.dart';
 import '../features/booking/trip_detail_page.dart';
 import '../features/home/home_page.dart';
 import '../features/more/content_page.dart';
+import '../features/more/favorites_page.dart';
 import '../features/more/more_page.dart';
 import '../features/more/payment_methods_page.dart';
 import '../features/notifications/notifications_page.dart';
@@ -89,6 +90,7 @@ GoRouter buildRouter(AuthSession session, AppFlags flags) {
       GoRoute(parentNavigatorKey: _rootKey, path: '/booking/:id/live', builder: (_, s) => LivePage(bookingId: s.pathParameters['id']!)),
       GoRoute(parentNavigatorKey: _rootKey, path: '/booking/:id/change-trip', builder: (_, s) => ChangeTripPage(bookingId: s.pathParameters['id']!)),
       GoRoute(parentNavigatorKey: _rootKey, path: '/payment-methods', builder: (_, _) => const PaymentMethodsPage()),
+      GoRoute(parentNavigatorKey: _rootKey, path: '/favorites', builder: (_, _) => const FavoritesPage()),
       GoRoute(parentNavigatorKey: _rootKey, path: '/content/:slug', builder: (_, s) => ContentPage(slug: s.pathParameters['slug']!)),
     ],
   );

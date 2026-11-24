@@ -45,6 +45,16 @@ void main() {
     expect(filters.list('carriers'), isNotEmpty);
     expect((await api.recentSearches()).first.obj('toCity').str('id'), pzu.id);
 
+    // Home extras: banners, suggestions, favourites.
+    await api.promotions();
+    final suggested = await api.suggestedTrips();
+    expect(suggested.map((t) => t.id), contains(trips.first.id));
+    await api.setFavorite(trips.first.id, true);
+    expect((await api.favorites()).single.isFavorite, isTrue);
+    expect((await api.suggestedTrips()).firstWhere((t) => t.id == trips.first.id).isFavorite, isTrue);
+    await api.setFavorite(trips.first.id, false);
+    expect(await api.favorites(), isEmpty);
+
     final trip = await api.trip(trips.first.id);
     expect(trip.stops, isNotEmpty);
     expect(trip.priceMinor, greaterThan(0));

@@ -22,6 +22,15 @@ class CustomerApi {
 
   Future<List<Destination>> popular() async => (await client.get('/public/destinations/popular')).items.map(Destination.new).toList();
 
+  Future<List<Promotion>> promotions() async => (await client.get('/public/promotions')).items.map(Promotion.new).toList();
+
+  Future<List<Trip>> suggestedTrips() async => (await client.get('/customer/trips/suggested')).items.map(Trip.new).toList();
+
+  Future<List<Trip>> favorites() async => (await client.get('/customer/favorites')).items.map(Trip.new).toList();
+
+  Future<void> setFavorite(String tripId, bool on) =>
+      on ? client.post('/customer/favorites/$tripId') : client.delete('/customer/favorites/$tripId');
+
   Future<Json> content(String slug) async => (await client.get('/public/content/$slug')).json;
 
   // ------------------------------------------------------------ profile

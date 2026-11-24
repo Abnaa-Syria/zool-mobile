@@ -74,6 +74,10 @@ class Trip {
   }
 
   String get middleLabel => stopsCount == 0 ? 'مباشر' : '$stopsCount توقف';
+
+  /// Suggested / favourite cards only.
+  bool get isFavorite => json.flag('isFavorite');
+  bool get bookable => json.flag('bookable', true);
 }
 
 /// GET /customer/trips/:id/seats seat.
@@ -217,6 +221,19 @@ class AppNotification {
   bool get isRead => json.flag('isRead');
   DateTime? get createdAt => json.date('createdAt');
   Json get data => json.obj('data');
+}
+
+/// GET /public/promotions item (D-PROMO-01): a coupon shown as a home banner.
+class Promotion {
+  Promotion(this.json);
+
+  final Json json;
+  String get code => json.str('code');
+  String get title => json.str('titleAr');
+  String? get subtitle => json.strOrNull('subtitleAr');
+  String? get imageUrl => json.strOrNull('imageUrl');
+  String? get carrierName => json.objOrNull('carrier')?.strOrNull('name');
+  DateTime? get validTo => json.date('validTo');
 }
 
 /// GET /public/destinations/popular item.

@@ -7,9 +7,13 @@ import 'package:zool_ui/zool_ui.dart';
 import '../../app/providers.dart';
 import '../../data/models.dart';
 import '../booking/flow.dart';
+import 'promo_carousel.dart';
+import 'suggested_trip_card.dart';
 
 final _recentProvider = FutureProvider.autoDispose<List<Json>>((ref) => ref.watch(apiProvider).recentSearches());
 final _popularProvider = FutureProvider.autoDispose<List<Destination>>((ref) => ref.watch(apiProvider).popular());
+final _promotionsProvider = FutureProvider.autoDispose<List<Promotion>>((ref) => ref.watch(apiProvider).promotions());
+final suggestedProvider = FutureProvider.autoDispose<List<Trip>>((ref) => ref.watch(apiProvider).suggestedTrips());
 
 /// Home (Figma 3074:2225): greeting + bell, search card, recent searches, popular destinations.
 class HomePage extends ConsumerStatefulWidget {
@@ -32,19 +36,28 @@ class _HomePageState extends ConsumerState<HomePage> {
     final me = ref.watch(meProvider).value;
     final flow = ref.read(bookingFlowProvider);
     return ZoolPage(
-      header: CustomerGreeting(name: me?.displayName),
+      header: CustomerGreeting(
+        name: me?.displayName,
+        onCity: (city) => _card.currentState?.fill(from: city),
+      ),
       body: RefreshIndicator(
         color: ZoolColors.brand,
         onRefresh: () async {
           ref.invalidate(_recentProvider);
           ref.invalidate(_popularProvider);
+          ref.invalidate(_promotionsProvider);
+          ref.invalidate(suggestedProvider);
           ref.invalidate(unreadCountProvider);
         },
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
           children: [
-            const Text('إلى أين ستسافر اليوم؟', style: TextStyle(fontSize: 13, color: ZoolColors.textSecondary)),
-            const SizedBox(height: 12),
+            Text(
+              me?.displayName == null ? 'أهلًا بك' : 'أهلًا، ${me!.displayName!.split(' ').first}',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: ZoolColors.textStrong),
+            ),
+            const Text('إلى أين ستسافر اليوم؟', style: TextStyle(fontSize: 14, color: ZoolColors.textSecondary)),
+            const SizedBox(height: 16),
             TripSearchCard(
               key: _card,
               initialFrom: flow.search?.from,
@@ -59,6 +72,8 @@ class _HomePageState extends ConsumerState<HomePage> {
             const SizedBox(height: 24),
             _Recent(onPick: (from, to, date, pax) => _card.currentState?.fill(from: from, to: to, date: date, passengers: pax)),
             _Popular(onPick: (to) => _card.currentState?.fill(to: to)),
+            const _Promotions(),
+            const _Suggested(),
           ],
         ),
       ),
@@ -66,21 +81,42 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 }
 
-/// Avatar · «أهلاً، …» · bell with the unread dot.
+/// Header (Figma 3074:2228): avatar and the city chip (your usual departure city, from the last
+/// search) on the start, the bell with the unread dot on the end.
 class CustomerGreeting extends ConsumerWidget {
-  const CustomerGreeting({super.key, required this.name});
+  const CustomerGreeting({super.key, required this.name, this.onCity});
 
   final String? name;
+  final ValueChanged<SearchCity>? onCity;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final unread = ref.watch(unreadCountProvider).value ?? 0;
-    return GreetingHeader(
-      name: name ?? '',
-      subtitle: 'زول قو — رحلاتك بين مدن السودان',
-      unread: unread > 0,
-      onBell: () => context.go('/notifications'),
-    );
+    final recent = ref.watch(_recentProvider).value ?? const [];
+    final city = recent.isEmpty ? null : SearchCity.fromJson(recent.first.obj('fromCity'));
+    return Row(children: [
+      InitialsAvatar(name ?? '', radius: 20),
+      const SizedBox(width: 10),
+      if (city != null)
+        Material(
+          color: Colors.white.withValues(alpha: 0.6),
+          shape: StadiumBorder(side: BorderSide(color: Colors.white.withValues(alpha: 0.8))),
+          child: InkWell(
+            customBorder: const StadiumBorder(),
+            onTap: () => onCity?.call(city),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(IconsaxPlusBold.location, size: 18, color: ZoolColors.brand),
+                const SizedBox(width: 6),
+                Text(city.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: ZoolColors.textStrong)),
+              ]),
+            ),
+          ),
+        ),
+      const Spacer(),
+      RoundIconButton(icon: IconsaxPlusLinear.notification, tooltip: 'الإشعارات', dot: unread > 0, onTap: () => context.go('/notifications')),
+    ]);
   }
 }
 
@@ -120,13 +156,16 @@ class _Recent extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            _CityDot(from.name, filled: true),
-                            const SizedBox(height: 6),
-                            _CityDot(to.name, filled: false),
+                            _CityDot(from.name),
+                            const Padding(
+                              padding: EdgeInsetsDirectional.only(start: 2),
+                              child: SizedBox(height: 10, child: VerticalDivider(width: 2, thickness: 1, color: ZoolColors.brand)),
+                            ),
+                            _CityDot(to.name),
                           ],
                         ),
                       ),
-                      if (date != null) Text(formatCalendarShort(date), style: const TextStyle(fontSize: 12, color: ZoolColors.textMuted)),
+                      Text(_when(r.date('searchedAt'), date), style: const TextStyle(fontSize: 12, color: ZoolColors.textMuted)),
                     ],
                   ),
                 ),
@@ -143,11 +182,19 @@ class _Recent extends ConsumerWidget {
 /// "25 نوفمبر" for a calendar date.
 String formatCalendarShort(DateTime d) => '${d.day} ${kArabicMonths[d.month - 1]}';
 
+/// When the search was made, as in the design: «اليوم» / «أمس» / its day.
+String _when(DateTime? searchedAt, DateTime? travelDate) {
+  if (searchedAt == null) return travelDate == null ? '' : formatCalendarShort(travelDate);
+  final day = sudanDay(searchedAt);
+  if (day == sudanDay()) return 'اليوم';
+  if (day == sudanDay(DateTime.now().subtract(const Duration(days: 1)))) return 'أمس';
+  return formatDayMonth(searchedAt);
+}
+
 class _CityDot extends StatelessWidget {
-  const _CityDot(this.name, {required this.filled});
+  const _CityDot(this.name);
 
   final String name;
-  final bool filled;
 
   @override
   Widget build(BuildContext context) => Row(
@@ -155,11 +202,7 @@ class _CityDot extends StatelessWidget {
           Container(
             width: 6,
             height: 6,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: filled ? ZoolColors.brand : Colors.white,
-              border: Border.all(color: ZoolColors.brand),
-            ),
+            decoration: const BoxDecoration(shape: BoxShape.circle, color: ZoolColors.brand),
           ),
           const SizedBox(width: 6),
           Expanded(child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: ZoolColors.textStrong))),
@@ -234,6 +277,46 @@ class _Popular extends ConsumerWidget {
                 ),
               );
             },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Promotions extends ConsumerWidget {
+  const _Promotions();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final items = ref.watch(_promotionsProvider).value ?? const [];
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Padding(padding: const EdgeInsets.only(top: 20), child: PromoCarousel(promotions: items));
+  }
+}
+
+class _Suggested extends ConsumerWidget {
+  const _Suggested();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final items = ref.watch(suggestedProvider).value ?? const [];
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 20),
+        const SectionTitle('رحلات مقترحة لك'),
+        SizedBox(
+          height: 205,
+          child: PageView.builder(
+            controller: PageController(viewportFraction: 1),
+            padEnds: false,
+            itemCount: items.length,
+            itemBuilder: (_, i) => Padding(
+              padding: const EdgeInsets.only(bottom: 20, left: 5, right: 5),
+              child: SuggestedTripCard(key: ValueKey(items[i].id), trip: items[i]),
+            ),
           ),
         ),
       ],

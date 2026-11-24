@@ -98,6 +98,15 @@ class FakeApi extends CustomerApi {
       ];
 
   @override
+  Future<List<Promotion>> promotions() async => [
+        Promotion({'code': 'ZOOL20', 'titleAr': 'خصم 20% على أول رحلة', 'subtitleAr': null}),
+        Promotion({'code': 'NILE10', 'titleAr': 'خصم 10% مع سودان إكسبريس', 'subtitleAr': 'لفترة محدودة'}),
+      ];
+
+  @override
+  Future<List<Trip>> suggestedTrips() async => [Trip({..._trip, 'isFavorite': true}), Trip({..._trip, 'id': 't3'})];
+
+  @override
   Future<List<Trip>> searchTrips(Map<String, Object?> query) async =>
       [Trip(_trip), Trip({..._trip, 'id': 't2', 'serviceClass': 'STANDARD', 'priceMinor': 2800000, 'seatsAvailable': 3})];
 
@@ -203,6 +212,12 @@ void main() {
     await boot(tester);
     expect(find.text('ابحث عن رحلة'), findsOneWidget);
     await shot(tester, 'home');
+  });
+
+  testWidgets('home (lower part)', (tester) async {
+    await boot(tester);
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -900));
+    await shot(tester, 'home_lower');
   });
 
   testWidgets('results', (tester) async {
