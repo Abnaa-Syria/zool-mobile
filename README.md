@@ -10,7 +10,7 @@ screen-to-API map live in the backend repository (`docs/APP_DEVELOPER_GUIDE.md`,
 | `packages/zool_ui` | Brand theme from the Figma file (RTL Arabic, Cairo, mint background, Iconsax icons) and shared widgets: OTP login, seat map, hold countdown, QR ticket, route timeline, paged list, states, dialogs | ✅ |
 | `apps/broker` | Agent-office app — `com.zoolgo.broker` | ✅ |
 | `apps/customer` | Customer app — `com.zoolgo.customer` | ✅ |
-| `apps/driver` | Driver app — `com.zoolgo.driver` | next |
+| `apps/driver` | Driver app — `com.zoolgo.driver`: today's trips, lifecycle (boarding → depart → stops → finish), QR / manual boarding with cash collection, no-shows, trip cash, GPS with an offline buffer | ✅ |
 
 ## Run
 
