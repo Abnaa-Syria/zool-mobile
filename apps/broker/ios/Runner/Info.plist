@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>زول قو وكيل</string>
+	<string>ZoolGo Broker</string>
 	<key>NSCameraUsageDescription</key>
 	<string>لتصوير إيصال شحن المحفظة.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
@@ -19,7 +19,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>broker</string>
+	<string>ZoolGo Broker</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

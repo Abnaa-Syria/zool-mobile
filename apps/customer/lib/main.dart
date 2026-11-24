@@ -46,7 +46,7 @@ class _CustomerAppState extends State<CustomerApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'زول قو',
+      title: 'ZoolGo',
       debugShowCheckedModeBanner: false,
       theme: zoolTheme(),
       locale: kZoolLocale,

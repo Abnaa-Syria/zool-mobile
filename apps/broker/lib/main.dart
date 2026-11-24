@@ -38,7 +38,7 @@ class _BrokerAppState extends State<BrokerApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'زول قو — الوكيل',
+      title: 'ZoolGo Broker',
       debugShowCheckedModeBanner: false,
       theme: zoolTheme(),
       locale: kZoolLocale,

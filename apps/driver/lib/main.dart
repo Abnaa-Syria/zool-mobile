@@ -45,7 +45,7 @@ class _DriverAppState extends State<DriverApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'زول قو — السائق',
+      title: 'ZoolGo Driver',
       debugShowCheckedModeBanner: false,
       theme: zoolTheme(),
       locale: kZoolLocale,
