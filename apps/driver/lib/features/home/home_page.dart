@@ -57,7 +57,8 @@ class _Body extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final current = d.currentTrip;
-    final featured = current ?? d.nextTrip;
+    // A trip of today not started yet (even if its time passed) comes before tomorrow's.
+    final featured = current ?? d.todayTrips.where((t) => t.status == 'SCHEDULED').firstOrNull ?? d.nextTrip;
     final today = d.todayTrips.where((t) => t.id != featured?.id).toList();
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),

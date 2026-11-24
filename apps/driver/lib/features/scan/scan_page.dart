@@ -11,6 +11,7 @@ import '../../app/labels.dart';
 import '../../app/providers.dart';
 import '../../data/models.dart';
 import '../boarding/board_action.dart';
+import '../boarding/boarding_page.dart';
 import '../trips/trip_detail_page.dart';
 
 /// «المسح» tab: the trip being boarded and a button to open the camera (the camera itself runs
@@ -24,7 +25,10 @@ class ScanTab extends ConsumerWidget {
     return ZoolPage(
       header: const Align(
         alignment: AlignmentDirectional.centerStart,
-        child: Text('مسح التذاكر', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: ZoolColors.textStrong)),
+        child: Text(
+          'مسح التذاكر',
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: ZoolColors.textStrong),
+        ),
       ),
       body: AsyncBody<DriverDashboard>(
         value: dash,
@@ -48,28 +52,36 @@ class ScanTab extends ConsumerWidget {
                     ),
             );
           }
-          return ListView(padding: const EdgeInsets.fromLTRB(20, 8, 20, 24), children: [
-            ZoolCard(
-              radius: ZoolRadii.bigCard,
-              padding: const EdgeInsets.all(20),
-              child: Column(children: [
-                Container(
-                  width: 96,
-                  height: 96,
-                  decoration: BoxDecoration(color: ZoolColors.secondarySoft, borderRadius: BorderRadius.circular(24)),
-                  child: const Icon(IconsaxPlusLinear.scan_barcode, size: 52, color: ZoolColors.brand),
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            children: [
+              ZoolCard(
+                radius: ZoolRadii.bigCard,
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 96,
+                      height: 96,
+                      decoration: BoxDecoration(color: ZoolColors.secondarySoft, borderRadius: BorderRadius.circular(24)),
+                      child: const Icon(IconsaxPlusLinear.scan_barcode, size: 52, color: ZoolColors.brand),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(trip.routeLabel, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 4),
+                    Text(
+                      'صعد ${trip.boarded} من ${trip.booked} · ${relativeDeparture(trip.departureAt)}',
+                      style: const TextStyle(fontSize: 12, color: ZoolColors.textSecondary),
+                    ),
+                    const SizedBox(height: 18),
+                    PrimaryButton(label: 'فتح الكاميرا', icon: IconsaxPlusLinear.camera, onPressed: () => context.push('/trip/${trip.id}/scan')),
+                    const SizedBox(height: 8),
+                    TextButton(onPressed: () => context.push('/trip/${trip.id}/passengers'), child: const Text('قائمة الركاب')),
+                  ],
                 ),
-                const SizedBox(height: 14),
-                Text(trip.routeLabel, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 4),
-                Text('صعد ${trip.boarded} من ${trip.booked} · ${relativeDeparture(trip.departureAt)}', style: const TextStyle(fontSize: 12, color: ZoolColors.textSecondary)),
-                const SizedBox(height: 18),
-                PrimaryButton(label: 'فتح الكاميرا', icon: IconsaxPlusLinear.camera, onPressed: () => context.push('/trip/${trip.id}/scan')),
-                const SizedBox(height: 8),
-                TextButton(onPressed: () => context.push('/trip/${trip.id}/passengers'), child: const Text('قائمة الركاب')),
-              ]),
-            ),
-          ]);
+              ),
+            ],
+          );
         },
       ),
     );
@@ -147,7 +159,25 @@ class _ScanPageState extends ConsumerState<ScanPage> {
         ],
       ),
     );
-    if (code != null && code.trim().length >= 4) await _check(code.trim().toUpperCase());
+    final typed = code?.trim().toUpperCase() ?? '';
+    if (typed.length < 4 || !mounted) return;
+    // The scan endpoint only trusts the signed QR; a typed number is looked up in this trip's
+    // manifest and boarded manually from the passenger sheet (full number or its last digits).
+    setState(() => _handling = true);
+    try {
+      final manifest = await ref.read(apiProvider).manifest(widget.tripId);
+      final match = manifest.passengers.where((p) => p.ticketNumber == typed || p.ticketNumber.endsWith(typed)).toList();
+      if (!mounted) return;
+      if (match.length == 1) {
+        await showPassengerSheet(context, widget.tripId, match.single, tripStatus: manifest.status);
+      } else {
+        showMessageSnack(context, match.isEmpty ? 'لا توجد تذكرة بهذا الرقم في هذه الرحلة.' : 'أدخل رقم التذكرة كاملًا.', success: false);
+      }
+    } catch (e) {
+      if (mounted) showMessageSnack(context, driverErrorText(e), success: false);
+    } finally {
+      if (mounted) setState(() => _handling = false);
+    }
   }
 
   @override
@@ -155,66 +185,97 @@ class _ScanPageState extends ConsumerState<ScanPage> {
     final trip = ref.watch(tripProvider(widget.tripId)).value;
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Stack(children: [
-        Positioned.fill(
-          child: MobileScanner(
-            controller: _controller,
-            onDetect: _onDetect,
-            errorBuilder: (context, error) => _CameraError(error: error, onManual: _manual),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Positioned.fill(
+            child: MobileScanner(
+              controller: _controller,
+              onDetect: _onDetect,
+              errorBuilder: (context, error) => _CameraError(error: error, onManual: _manual),
+            ),
           ),
-        ),
-        const Positioned.fill(child: _Viewfinder()),
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: Row(children: [
-              RoundIconButton(icon: IconsaxPlusLinear.arrow_right, tooltip: 'رجوع', onTap: () => Navigator.of(context).maybePop()),
-              Expanded(
-                child: Column(children: [
-                  const Text('مسح التذكرة', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
-                  if (trip != null) Text('صعد ${trip.boarded} من ${trip.booked}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                ]),
-              ),
-              ValueListenableBuilder(
-                valueListenable: _controller,
-                builder: (context, state, _) => RoundIconButton(
-                  icon: state.torchState == TorchState.on ? IconsaxPlusBold.flash_1 : IconsaxPlusLinear.flash_1,
-                  tooltip: 'الإضاءة',
-                  onTap: _controller.toggleTorch,
+          const Positioned.fill(child: _Viewfinder()),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Row(
+                  children: [
+                    RoundIconButton(icon: IconsaxPlusLinear.arrow_right, tooltip: 'رجوع', onTap: () => Navigator.of(context).maybePop()),
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'مسح التذكرة',
+                            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
+                          ),
+                          if (trip != null) Text('صعد ${trip.boarded} من ${trip.booked}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                    ValueListenableBuilder(
+                      valueListenable: _controller,
+                      builder: (context, state, _) => RoundIconButton(
+                        icon: state.torchState == TorchState.on ? IconsaxPlusBold.flash_1 : IconsaxPlusLinear.flash_1,
+                        tooltip: 'الإضاءة',
+                        onTap: _controller.toggleTorch,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ]),
+            ),
           ),
-        ),
-        Positioned(
-          left: 24,
-          right: 24,
-          bottom: 40,
-          child: SafeArea(
-            top: false,
-            child: Column(children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(14)),
-                child: _handling
-                    ? const Row(mainAxisSize: MainAxisSize.min, children: [
-                        SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
-                        SizedBox(width: 10),
-                        Text('جارٍ التحقق من التذكرة…', style: TextStyle(color: Colors.white, fontSize: 13)),
-                      ])
-                    : const Text('وجّه الكاميرا نحو رمز QR على تذكرة الراكب', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 13)),
+          Positioned(
+            left: 24,
+            right: 24,
+            bottom: 40,
+            child: SafeArea(
+              top: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(14)),
+                    child: _handling
+                        ? const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                              SizedBox(width: 10),
+                              Text('جارٍ التحقق من التذكرة…', style: TextStyle(color: Colors.white, fontSize: 13)),
+                            ],
+                          )
+                        : const Text(
+                            'وجّه الكاميرا نحو رمز QR على تذكرة الراكب',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.white, fontSize: 13),
+                          ),
+                  ),
+                  const SizedBox(height: 14),
+                  OutlinedButton.icon(
+                    onPressed: _handling ? null : _manual,
+                    icon: const Icon(IconsaxPlusLinear.keyboard, size: 18),
+                    label: const Text('إدخال رقم التذكرة يدويًا'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      backgroundColor: Colors.black45,
+                      side: const BorderSide(color: Colors.white54),
+                      minimumSize: const Size(0, 46),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 14),
-              OutlinedButton.icon(
-                onPressed: _handling ? null : _manual,
-                icon: const Icon(IconsaxPlusLinear.keyboard, size: 18),
-                label: const Text('إدخال رقم التذكرة يدويًا'),
-                style: OutlinedButton.styleFrom(foregroundColor: Colors.white, side: const BorderSide(color: Colors.white54), minimumSize: const Size(0, 46)),
-              ),
-            ]),
+            ),
           ),
-        ),
-      ]),
+        ],
+      ),
     );
   }
 }
@@ -224,26 +285,47 @@ class _Viewfinder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, c) {
-      final side = (c.maxWidth * 0.68).clamp(200.0, 320.0);
-      return Stack(children: [
-        ColorFiltered(
-          colorFilter: const ColorFilter.mode(Colors.black54, BlendMode.srcOut),
-          child: Stack(children: [
-            Container(decoration: const BoxDecoration(color: Colors.transparent, backgroundBlendMode: BlendMode.dstOut)),
-            Center(child: Container(width: side, height: side, decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(24)))),
-          ]),
-        ),
-        Center(
-          child: Container(
-            width: side,
-            height: side,
-            decoration: BoxDecoration(border: Border.all(color: const Color(0xFF82F2A8), width: 3), borderRadius: BorderRadius.circular(24)),
-          ),
-        ),
-      ]);
-    });
+    return LayoutBuilder(
+      builder: (context, c) {
+        final side = (c.maxWidth * 0.68).clamp(200.0, 320.0);
+        return Stack(
+          children: [
+            Positioned.fill(child: CustomPaint(painter: _MaskPainter(side))),
+            Center(
+              child: Container(
+                width: side,
+                height: side,
+                decoration: BoxDecoration(
+                  border: Border.all(color: const Color(0xFF82F2A8), width: 3),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
+}
+
+/// Dims the camera outside the centred square window.
+class _MaskPainter extends CustomPainter {
+  _MaskPainter(this.side);
+
+  final double side;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final window = RRect.fromRectAndRadius(Rect.fromCenter(center: size.center(Offset.zero), width: side, height: side), const Radius.circular(24));
+    final path = Path()
+      ..fillType = PathFillType.evenOdd
+      ..addRect(Offset.zero & size)
+      ..addRRect(window);
+    canvas.drawPath(path, Paint()..color = Colors.black54);
+  }
+
+  @override
+  bool shouldRepaint(_MaskPainter old) => old.side != side;
 }
 
 class _CameraError extends StatelessWidget {
@@ -260,15 +342,18 @@ class _CameraError extends StatelessWidget {
       child: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(IconsaxPlusLinear.camera_slash, color: Colors.white70, size: 48),
-            const SizedBox(height: 12),
-            Text(
-              denied ? 'اسمح للتطبيق باستخدام الكاميرا من إعدادات الهاتف لمسح التذاكر.' : 'تعذّر تشغيل الكاميرا.',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-            ),
-          ]),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(IconsaxPlusLinear.camera_slash, color: Colors.white70, size: 48),
+              const SizedBox(height: 12),
+              Text(
+                denied ? 'اسمح للتطبيق باستخدام الكاميرا من إعدادات الهاتف لمسح التذاكر.' : 'تعذّر تشغيل الكاميرا.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -312,47 +397,60 @@ class _ScanResultSheetState extends ConsumerState<ScanResultSheet> {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Row(children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(color: color.withValues(alpha: 0.12), shape: BoxShape.circle),
-              child: Icon(r.isValid ? IconsaxPlusBold.tick_circle : IconsaxPlusBold.info_circle, color: color),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(color: color.withValues(alpha: 0.12), shape: BoxShape.circle),
+                  child: Icon(r.isValid ? IconsaxPlusBold.tick_circle : IconsaxPlusBold.info_circle, color: color),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: ZoolColors.textStrong),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
+                  child: Text(
+                    chip,
+                    style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            Expanded(child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: ZoolColors.textStrong))),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
-              child: Text(chip, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w700)),
-            ),
-          ]),
-          if (explain != null) ...[
-            const SizedBox(height: 10),
-            Text(explain, style: const TextStyle(fontSize: 13, color: ZoolColors.textSecondary)),
+            if (explain != null) ...[const SizedBox(height: 10), Text(explain, style: const TextStyle(fontSize: 13, color: ZoolColors.textSecondary))],
+            if (p != null) ...[
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Divider(height: 1, color: ZoolColors.divider),
+              ),
+              InfoRow('الراكب', p.fullName, bold: true),
+              InfoRow('المقعد المخصص', 'مقعد ${p.seatLabel}', bold: true, valueColor: ZoolColors.brand),
+              InfoRow('خط الرحلة', r.tripLabel, bold: true),
+              InfoRow('المغادرة', formatDateTime(r.departureAt)),
+              if (p.cashToCollectMinor > 0) InfoRow('يدفع نقدًا', formatSdg(p.cashToCollectMinor), bold: true, valueColor: ZoolColors.warning),
+            ],
+            const SizedBox(height: 16),
+            if (r.isValid && p != null)
+              PrimaryButton(
+                label: p.cashToCollectMinor > 0 ? 'استلام المبلغ وتسجيل الصعود' : 'تسجيل ومتابعة المسح',
+                color: ZoolColors.brand,
+                busy: _busy,
+                onPressed: _busy ? null : () => _board(p),
+              )
+            else
+              PrimaryButton(label: 'متابعة المسح', color: ZoolColors.brand, onPressed: () => Navigator.of(context).pop()),
+            if (r.isValid) TextButton(onPressed: _busy ? null : () => Navigator.of(context).pop(), child: const Text('إلغاء')),
           ],
-          if (p != null) ...[
-            const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Divider(height: 1, color: ZoolColors.divider)),
-            InfoRow('الراكب', p.fullName, bold: true),
-            InfoRow('المقعد المخصص', 'مقعد ${p.seatLabel}', bold: true, valueColor: ZoolColors.brand),
-            InfoRow('خط الرحلة', r.tripLabel, bold: true),
-            InfoRow('المغادرة', formatDateTime(r.departureAt)),
-            if (p.cashToCollectMinor > 0) InfoRow('يدفع نقدًا', formatSdg(p.cashToCollectMinor), bold: true, valueColor: ZoolColors.warning),
-          ],
-          const SizedBox(height: 16),
-          if (r.isValid && p != null)
-            PrimaryButton(
-              label: p.cashToCollectMinor > 0 ? 'استلام المبلغ وتسجيل الصعود' : 'تسجيل ومتابعة المسح',
-              color: ZoolColors.brand,
-              busy: _busy,
-              onPressed: _busy ? null : () => _board(p),
-            )
-          else
-            PrimaryButton(label: 'متابعة المسح', color: ZoolColors.brand, onPressed: () => Navigator.of(context).pop()),
-          if (r.isValid)
-            TextButton(onPressed: _busy ? null : () => Navigator.of(context).pop(), child: const Text('إلغاء')),
-        ]),
+        ),
       ),
     );
   }
