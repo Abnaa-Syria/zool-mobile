@@ -39,10 +39,11 @@ final meProvider = FutureProvider<CustomerMe>((ref) => ref.watch(apiProvider).me
 
 final appConfigProvider = FutureProvider<Json>((ref) => ref.watch(apiProvider).appConfig());
 
-/// Map tiles from the app config; OpenStreetMap when the config cannot be loaded.
-final mapTilesProvider = FutureProvider<MapTiles>((ref) async {
+/// Map tiles from the app config, read again each time a map opens (so a key or map changed in
+/// the admin settings applies without restarting); OpenStreetMap when the config cannot be loaded.
+final mapTilesProvider = FutureProvider.autoDispose<MapTiles>((ref) async {
   try {
-    return MapTiles.fromAppConfig(await ref.watch(appConfigProvider.future));
+    return MapTiles.fromAppConfig(await ref.watch(apiProvider).appConfig());
   } catch (_) {
     return MapTiles.osm;
   }

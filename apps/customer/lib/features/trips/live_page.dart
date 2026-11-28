@@ -102,6 +102,12 @@ class _LivePageState extends ConsumerState<LivePage> {
                         : null,
                     initialCenter: points.first,
                     initialZoom: 8,
+                    // Fit again once the map has its final size (the first layout can be mid-transition).
+                    onMapReady: () => WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted && points.length > 1) {
+                        _map.fitCamera(CameraFit.coordinates(coordinates: points, padding: const EdgeInsets.fromLTRB(40, 230, 40, 400)));
+                      }
+                    }),
                     interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
                   ),
                   children: [

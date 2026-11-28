@@ -33,6 +33,15 @@ class _TripMapState extends ConsumerState<TripMap> {
             ),
       ];
 
+  /// Shows every point; runs after the first frame, when the map has its final size.
+  void _fit(List<LatLng> points) {
+    if (points.length < 2) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _map.fitCamera(CameraFit.coordinates(coordinates: points, padding: const EdgeInsets.fromLTRB(48, 64, 48, 48)));
+    });
+  }
+
   void _zoom(double delta) {
     if (!_ready) return;
     final cam = _map.camera;
@@ -72,7 +81,10 @@ class _TripMapState extends ConsumerState<TripMap> {
                           : null,
                       initialCenter: points.first,
                       initialZoom: 9,
-                      onMapReady: () => _ready = true,
+                      onMapReady: () {
+                        _ready = true;
+                        _fit(points);
+                      },
                       interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
                     ),
                     children: [
