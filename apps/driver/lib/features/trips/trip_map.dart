@@ -7,8 +7,8 @@ import 'package:zool_ui/zool_ui.dart';
 
 import '../../app/providers.dart';
 
-/// Trip map card (Figma 3043:3170 MapPlaceholder): dark green map, glowing route between the
-/// stations, the bus marker, «تتبع المسار مباشرة» while live, zoom buttons and the speed.
+/// Trip map card (Figma 3043:3170 MapPlaceholder): the map with the stations (Arabic names), the
+/// line between them, the bus marker, «تتبع المسار مباشرة» while live, zoom buttons and the speed.
 class TripMap extends ConsumerStatefulWidget {
   const TripMap({super.key, required this.live, this.height = 210});
 
@@ -29,7 +29,7 @@ class _TripMapState extends ConsumerState<TripMap> {
           if (t.obj('station').numOrNull('lat') != null && t.obj('station').numOrNull('lng') != null)
             (
               point: LatLng(t.obj('station').numOrNull('lat')!, t.obj('station').numOrNull('lng')!),
-              name: (t.obj('station').obj('city').strOrNull('nameEn') ?? '').toUpperCase(),
+              name: t.obj('station').obj('city').strOrNull('nameAr') ?? t.obj('station').strOrNull('nameAr') ?? '',
             ),
       ];
 
@@ -60,15 +60,15 @@ class _TripMapState extends ConsumerState<TripMap> {
           Positioned.fill(
             child: points.isEmpty
                 ? const ColoredBox(
-                    color: Color(0xFF1C2A22),
-                    child: Center(child: Text('لا توجد إحداثيات للمحطات بعد', style: TextStyle(color: Colors.white70, fontSize: 12))),
+                    color: ZoolColors.secondarySoft,
+                    child: Center(child: Text('لا توجد إحداثيات للمحطات بعد', style: TextStyle(color: ZoolColors.textMuted, fontSize: 12))),
                   )
                 : FlutterMap(
                     mapController: _map,
                     options: MapOptions(
-                      backgroundColor: const Color(0xFF1C2A22),
+                      backgroundColor: ZoolColors.secondarySoft,
                       initialCameraFit: points.length > 1
-                          ? CameraFit.coordinates(coordinates: points, padding: const EdgeInsets.fromLTRB(36, 56, 36, 36))
+                          ? CameraFit.coordinates(coordinates: points, padding: const EdgeInsets.fromLTRB(48, 64, 48, 48))
                           : null,
                       initialCenter: points.first,
                       initialZoom: 9,
@@ -81,24 +81,27 @@ class _TripMapState extends ConsumerState<TripMap> {
                           urlTemplate: tiles.urlTemplate,
                           maxNativeZoom: tiles.maxZoom.toInt(),
                           userAgentPackageName: 'com.zoolgo.driver',
-                          tileBuilder: _darkGreenTile,
                         ),
                       if (route.length > 1)
                         PolylineLayer(polylines: [
-                          Polyline(points: route, color: const Color(0x5582F2A8), strokeWidth: 9),
-                          Polyline(points: route, color: const Color(0xFFD9FBE4), strokeWidth: 3),
+                          // Stations joined in order (not the road itself), so a dashed line.
+                          Polyline(
+                            points: route,
+                            color: ZoolColors.brand,
+                            strokeWidth: 4,
+                            borderColor: Colors.white,
+                            borderStrokeWidth: 2,
+                            pattern: StrokePattern.dashed(segments: const [12, 8]),
+                          ),
                         ]),
                       MarkerLayer(markers: [
-                        for (final s in stations)
+                        for (final (i, s) in stations.indexed)
                           Marker(
                             point: s.point,
-                            width: 110,
-                            height: 34,
-                            child: Column(mainAxisSize: MainAxisSize.min, children: [
-                              Text(s.name, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700)),
-                              const SizedBox(height: 2),
-                              Container(width: 8, height: 8, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
-                            ]),
+                            width: 120,
+                            height: 52,
+                            alignment: Alignment.topCenter,
+                            child: _StationPin(name: s.name, color: i == stations.length - 1 ? ZoolColors.primary : ZoolColors.brand),
                           ),
                         if (bus != null)
                           Marker(
@@ -106,7 +109,7 @@ class _TripMapState extends ConsumerState<TripMap> {
                             width: 44,
                             height: 44,
                             child: Container(
-                              decoration: BoxDecoration(color: const Color(0xFF82F2A8).withValues(alpha: 0.3), shape: BoxShape.circle),
+                              decoration: BoxDecoration(color: ZoolColors.brand.withValues(alpha: 0.25), shape: BoxShape.circle),
                               padding: const EdgeInsets.all(7),
                               child: Container(
                                 decoration: const BoxDecoration(color: ZoolColors.brand, shape: BoxShape.circle),
@@ -124,11 +127,15 @@ class _TripMapState extends ConsumerState<TripMap> {
               end: 10,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.45), borderRadius: BorderRadius.circular(20)),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: const [BoxShadow(color: Color(0x22000000), blurRadius: 6, offset: Offset(0, 2))],
+                ),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   Container(width: 8, height: 8, decoration: const BoxDecoration(color: ZoolColors.success, shape: BoxShape.circle)),
                   const SizedBox(width: 6),
-                  const Text('تتبع المسار مباشرة', style: TextStyle(color: Color(0xFF82F2A8), fontSize: 12, fontWeight: FontWeight.w700)),
+                  const Text('تتبع المسار مباشرة', style: TextStyle(color: ZoolColors.brand, fontSize: 12, fontWeight: FontWeight.w700)),
                 ]),
               ),
             ),
@@ -142,12 +149,16 @@ class _TripMapState extends ConsumerState<TripMap> {
                 _MapButton(icon: Icons.remove, onTap: () => _zoom(-1)),
               ]),
               if (speed != null) ...[
-                const SizedBox(height: 4),
-                Row(children: [
-                  const Icon(IconsaxPlusLinear.speedometer, color: Colors.white70, size: 12),
-                  const SizedBox(width: 4),
-                  Text('$speed km/h', style: const TextStyle(color: Colors.white70, fontSize: 10)),
-                ]),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    const Icon(IconsaxPlusLinear.speedometer, color: ZoolColors.textStrong, size: 12),
+                    const SizedBox(width: 4),
+                    Text('$speed كم/س', style: const TextStyle(color: ZoolColors.textStrong, fontSize: 11, fontWeight: FontWeight.w600)),
+                  ]),
+                ),
               ],
             ]),
           ),
@@ -157,16 +168,34 @@ class _TripMapState extends ConsumerState<TripMap> {
   }
 }
 
-/// Darkens and tints OSM tiles to the design's night-green look.
-Widget _darkGreenTile(BuildContext context, Widget tile, TileImage image) => ColorFiltered(
-      colorFilter: const ColorFilter.matrix([
-        -0.12, -0.22, -0.05, 0, 70, //
-        -0.10, -0.25, -0.05, 0, 95,
-        -0.10, -0.22, -0.06, 0, 72,
-        0, 0, 0, 1, 0,
-      ]),
-      child: tile,
-    );
+/// Station label (Arabic city name) above its dot.
+class _StationPin extends StatelessWidget {
+  const _StationPin({required this.name, required this.color});
+
+  final String name;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 4, offset: Offset(0, 1))],
+        ),
+        child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700)),
+      ),
+      const SizedBox(height: 3),
+      Container(
+        width: 14,
+        height: 14,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 3)),
+      ),
+    ]);
+  }
+}
 
 class _MapButton extends StatelessWidget {
   const _MapButton({required this.icon, required this.onTap});
@@ -180,10 +209,14 @@ class _MapButton extends StatelessWidget {
       onTap: onTap,
       customBorder: const CircleBorder(),
       child: Container(
-        width: 22,
-        height: 22,
-        decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white70)),
-        child: Icon(icon, size: 14, color: Colors.white70),
+        width: 32,
+        height: 32,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [BoxShadow(color: Color(0x33000000), blurRadius: 4, offset: Offset(0, 1))],
+        ),
+        child: Icon(icon, size: 18, color: ZoolColors.textStrong),
       ),
     );
   }
