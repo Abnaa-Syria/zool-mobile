@@ -6,6 +6,12 @@
 	<string>لمسح رمز QR على تذاكر الركاب عند الصعود.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>لمشاركة موقع الباص مع الركاب أثناء الرحلة.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>لمواصلة مشاركة موقع الباص مع الركاب أثناء الرحلة حتى عند قفل الشاشة.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

@@ -57,8 +57,12 @@ class _Body extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final current = d.currentTrip;
-    // A trip of today not started yet (even if its time passed) comes before tomorrow's.
-    final featured = current ?? d.todayTrips.where((t) => t.status == 'SCHEDULED').firstOrNull ?? d.nextTrip;
+    // A trip of today not started yet comes before tomorrow's, even if the driver is running a
+    // little late; one that should have left hours ago is not "next" any more.
+    final lateLimit = DateTime.now().subtract(const Duration(hours: 2));
+    final featured = current ??
+        d.todayTrips.where((t) => t.status == 'SCHEDULED' && (t.departureAt?.isAfter(lateLimit) ?? true)).firstOrNull ??
+        d.nextTrip;
     final today = d.todayTrips.where((t) => t.id != featured?.id).toList();
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),

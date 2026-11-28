@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' show Color;
 
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
@@ -19,12 +20,17 @@ enum GpsProblem { none, serviceOff, denied, deniedForever }
 /// Every [interval] it reads one fix, appends it to a buffer kept in shared preferences (so a
 /// network gap or an app restart loses nothing) and flushes the buffer in batches of 100. The
 /// backend drops fixes older than its window, so an old buffer is harmless.
+///
+/// On the device a position stream runs while tracking. On Android it starts a foreground
+/// service (an ongoing «ZoolGo Driver» notification) and on iOS it enables background location
+/// updates, so the bus keeps reporting when the driver locks the screen or switches apps.
 class GpsTracker extends ChangeNotifier {
-  GpsTracker({required this.send, GpsLocator? locate, this.interval = const Duration(seconds: 20), this.enabled = true})
-      : _locate = locate ?? _deviceFix;
+  GpsTracker({required this.send, this.locate, this.interval = const Duration(seconds: 20), this.enabled = true});
 
   final GpsSender send;
-  final GpsLocator _locate;
+
+  /// Test hook; null on the device (fixes come from the background stream).
+  final GpsLocator? locate;
   final Duration interval;
 
   /// False in widget tests (no platform channels).
@@ -41,6 +47,8 @@ class GpsTracker extends ChangeNotifier {
   DateTime? _lastSentAt;
   GpsPoint? _lastFix;
   GpsProblem _problem = GpsProblem.none;
+  StreamSubscription<Position>? _stream;
+  GpsPoint? _streamFix;
 
   String? get tripId => _tripId;
   bool get active => _tripId != null;
@@ -59,6 +67,7 @@ class GpsTracker extends ChangeNotifier {
       ..addAll(await _restore(tripId));
     notifyListeners();
     await _ensurePermission();
+    _startStream();
     unawaited(_tick());
     _timer = Timer.periodic(interval, (_) => _tick());
   }
@@ -67,6 +76,7 @@ class GpsTracker extends ChangeNotifier {
   Future<void> stop() async {
     _timer?.cancel();
     _timer = null;
+    await _stopStream();
     if (_tripId == null) return;
     _tripId = null;
     notifyListeners();
@@ -75,7 +85,10 @@ class GpsTracker extends ChangeNotifier {
   /// Asks for permission again (from the banner).
   Future<void> retryPermission() async {
     await _ensurePermission(openSettings: true);
-    if (_problem == GpsProblem.none) unawaited(_tick());
+    if (_problem == GpsProblem.none) {
+      _startStream();
+      unawaited(_tick());
+    }
   }
 
   Future<void> _ensurePermission({bool openSettings = false}) async {
@@ -106,7 +119,7 @@ class GpsTracker extends ChangeNotifier {
     try {
       GpsPoint? fix;
       try {
-        fix = await _locate();
+        fix = await (locate ?? _deviceFix)();
         if (_problem != GpsProblem.none && fix != null) _problem = GpsProblem.none;
       } catch (_) {
         await _ensurePermission();
@@ -176,10 +189,72 @@ class GpsTracker extends ChangeNotifier {
     } catch (_) {}
   }
 
-  static Future<GpsPoint?> _deviceFix() async {
+  /// Keeps the location service alive in the background while a trip is tracked.
+  void _startStream() {
+    if (locate != null || _stream != null || _tripId == null || _problem != GpsProblem.none) return;
+    try {
+      _stream = Geolocator.getPositionStream(locationSettings: _streamSettings(interval)).listen(
+        (p) => _streamFix = _toPoint(p),
+        onError: (_) async {
+          await _stopStream();
+          await _ensurePermission();
+        },
+      );
+    } catch (_) {
+      _stream = null;
+    }
+  }
+
+  Future<void> _stopStream() async {
+    final s = _stream;
+    _stream = null;
+    _streamFix = null;
+    await s?.cancel();
+  }
+
+  static LocationSettings _streamSettings(Duration interval) {
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        return AndroidSettings(
+          accuracy: LocationAccuracy.high,
+          intervalDuration: interval,
+          foregroundNotificationConfig: const ForegroundNotificationConfig(
+            notificationTitle: 'ZoolGo Driver',
+            notificationText: 'يتم مشاركة موقع الباص مع الركاب أثناء الرحلة',
+            notificationChannelName: 'تتبع الرحلة',
+            notificationIcon: AndroidResource(name: 'ic_stat_zoolgo', defType: 'drawable'),
+            enableWakeLock: true,
+            setOngoing: true,
+            color: Color(0xFF03442C),
+          ),
+        );
+      case TargetPlatform.iOS:
+        return AppleSettings(
+          accuracy: LocationAccuracy.high,
+          activityType: ActivityType.automotiveNavigation,
+          pauseLocationUpdatesAutomatically: false,
+          allowBackgroundLocationUpdates: true,
+          showBackgroundLocationIndicator: true,
+        );
+      default:
+        return const LocationSettings(accuracy: LocationAccuracy.high);
+    }
+  }
+
+  /// The freshest stream fix, or a one-off reading when the stream has nothing recent.
+  Future<GpsPoint?> _deviceFix() async {
+    final recent = _streamFix;
+    if (recent != null && DateTime.now().difference(recent.recordedAt) < interval * 2) {
+      _streamFix = null; // each fix is sent once
+      return recent;
+    }
     final p = await Geolocator.getCurrentPosition(
       locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 15)),
     );
+    return _toPoint(p);
+  }
+
+  static GpsPoint _toPoint(Position p) {
     final speed = p.speed.isFinite && p.speed >= 0 ? (p.speed * 3.6).round().clamp(0, 300) : null;
     final heading = p.heading.isFinite && p.heading >= 0 ? p.heading.round() % 360 : null;
     return GpsPoint(lat: p.latitude, lng: p.longitude, speedKmh: speed, heading: heading, recordedAt: p.timestamp);
@@ -188,6 +263,7 @@ class GpsTracker extends ChangeNotifier {
   @override
   void dispose() {
     _timer?.cancel();
+    _stream?.cancel();
     super.dispose();
   }
 }
