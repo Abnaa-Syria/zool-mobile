@@ -25,6 +25,8 @@ dependencies:
   uuid: ^4.6.0
   zool_core:
     path: ../../packages/zool_core
+  zool_push:
+    path: ../../packages/zool_push
   zool_ui:
     path: ../../packages/zool_ui
 dev_dependencies:

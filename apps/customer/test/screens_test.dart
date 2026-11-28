@@ -14,6 +14,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zool_core/zool_core.dart';
+import 'package:zool_push/zool_push.dart';
 import 'package:zool_ui/zool_ui.dart';
 
 final _dep = DateTime.now().toUtc().add(const Duration(days: 1)).copyWith(hour: 5, minute: 0, second: 0);
@@ -183,7 +184,7 @@ void main() {
         appFlagsProvider.overrideWithValue(flags),
         apiProvider.overrideWith((ref) => FakeApi(ApiClient(session, dio: dio))),
       ],
-      child: CustomerApp(session: session, flags: flags),
+      child: CustomerApp(session: session, flags: flags, push: ZoolPush(app: ZoolApp.customer, client: ApiClient(session), devicesPath: '/customer/devices')),
     ));
     await tester.pumpAndSettle();
     final element = tester.element(find.byType(Navigator).first);

@@ -25,6 +25,8 @@ dependencies:
   url_launcher: ^6.3.3
   zool_core:
     path: ../../packages/zool_core
+  zool_push:
+    path: ../../packages/zool_push
   zool_ui:
     path: ../../packages/zool_ui
 dev_dependencies:

@@ -5,6 +5,7 @@ environment:
 workspace:
   - packages/zool_core
   - packages/zool_ui
+  - packages/zool_push
   - apps/broker
   - apps/customer
   - apps/driver

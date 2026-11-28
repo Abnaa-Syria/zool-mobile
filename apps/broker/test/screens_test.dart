@@ -15,6 +15,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zool_core/zool_core.dart';
+import 'package:zool_push/zool_push.dart';
 
 final _dep = DateTime.now().toUtc().add(const Duration(days: 1)).copyWith(hour: 5, minute: 0);
 
@@ -169,7 +170,7 @@ void main() {
         sessionProvider.overrideWithValue(session),
         apiProvider.overrideWith((ref) => FakeApi(ApiClient(session, dio: dio))),
       ],
-      child: BrokerApp(session: session),
+      child: BrokerApp(session: session, push: ZoolPush(app: ZoolApp.broker, client: ApiClient(session), devicesPath: '/broker/devices')),
     ));
     await tester.pumpAndSettle();
     return GoRouter.of(tester.element(find.byType(Navigator).first));

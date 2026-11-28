@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zool_core/zool_core.dart';
+import 'package:zool_push/zool_push.dart';
 
 void main() {
   testWidgets('signed out → the login screen (phone step, RTL)', (tester) async {
@@ -11,7 +12,7 @@ void main() {
     await session.restore(); // no stored token → signed out, no network
     await tester.pumpWidget(ProviderScope(
       overrides: [sessionProvider.overrideWithValue(session)],
-      child: BrokerApp(session: session),
+      child: BrokerApp(session: session, push: ZoolPush(app: ZoolApp.broker, client: ApiClient(session), devicesPath: '/broker/devices')),
     ));
     await tester.pumpAndSettle();
     expect(find.text('أدخل رقم هاتفك'), findsOneWidget);

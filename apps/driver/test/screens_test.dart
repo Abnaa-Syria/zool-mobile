@@ -15,6 +15,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zool_core/zool_core.dart';
+import 'package:zool_push/zool_push.dart';
 
 final _dep = DateTime.now().toUtc().add(const Duration(hours: 2));
 
@@ -149,7 +150,7 @@ void main() {
         apiProvider.overrideWithValue(api),
         gpsProvider.overrideWithValue(GpsTracker(send: (_, _) async {}, enabled: false)),
       ],
-      child: DriverApp(session: session),
+      child: DriverApp(session: session, push: ZoolPush(app: ZoolApp.driver, client: ApiClient(session), devicesPath: '/driver/devices')),
     ));
     await tester.pumpAndSettle();
     final element = tester.element(find.byType(Navigator).first);

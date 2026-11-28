@@ -1,3 +1,3 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Looked up by name at runtime (geolocator foreground notification); keep it from resource shrinking. -->
-<resources xmlns:tools="http://schemas.android.com/tools" tools:keep="@drawable/ic_stat_zoolgo" />
+<!-- Looked up by name at runtime (push + tracking notifications); keep them from resource shrinking. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:keep="@drawable/ic_stat_zoolgo,@color/zoolgo_notification" />

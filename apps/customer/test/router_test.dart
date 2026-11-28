@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zool_core/zool_core.dart';
+import 'package:zool_push/zool_push.dart';
 
 void main() {
   testWidgets('onboarding → «ابدأ الآن» → login', (tester) async {
@@ -14,7 +15,7 @@ void main() {
     final flags = AppFlags(false);
     await tester.pumpWidget(ProviderScope(
       overrides: [sessionProvider.overrideWithValue(session), appFlagsProvider.overrideWithValue(flags)],
-      child: CustomerApp(session: session, flags: flags),
+      child: CustomerApp(session: session, flags: flags, push: ZoolPush(app: ZoolApp.customer, client: ApiClient(session), devicesPath: '/customer/devices')),
     ));
     await tester.pumpAndSettle();
     expect(find.text('التالي'), findsOneWidget);
