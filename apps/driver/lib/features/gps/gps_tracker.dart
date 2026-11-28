@@ -4,6 +4,7 @@ import 'dart:ui' show Color;
 
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:permission_handler/permission_handler.dart' as ph;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zool_core/zool_core.dart';
 
@@ -67,6 +68,12 @@ class GpsTracker extends ChangeNotifier {
       ..addAll(await _restore(tripId));
     notifyListeners();
     await _ensurePermission();
+    // Android 13+: without it the tracking still runs, but the ongoing notification is hidden.
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      try {
+        await ph.Permission.notification.request();
+      } catch (_) {}
+    }
     _startStream();
     unawaited(_tick());
     _timer = Timer.periodic(interval, (_) => _tick());
