@@ -36,6 +36,15 @@ final cashProvider = FutureProvider.autoDispose.family<CashSummary, String>((ref
   return ref.watch(apiProvider).cash(id);
 });
 
+/// Map tiles from the app config; OpenStreetMap when the config cannot be loaded.
+final mapTilesProvider = FutureProvider<MapTiles>((ref) async {
+  try {
+    return MapTiles.fromAppConfig(await ref.watch(apiProvider).appConfig());
+  } catch (_) {
+    return MapTiles.osm;
+  }
+});
+
 final unreadCountProvider = FutureProvider.autoDispose<int>((ref) => ref.watch(apiProvider).unreadCount());
 
 /// Bumped after a status change, boarding, no-show or stop event; screens watch it to reload.

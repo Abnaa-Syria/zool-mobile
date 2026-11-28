@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:zool_core/zool_core.dart';
 import 'package:zool_ui/zool_ui.dart';
 
+import '../../app/providers.dart';
+
 /// Trip map card (Figma 3043:3170 MapPlaceholder): dark green map, glowing route between the
 /// stations, the bus marker, «تتبع المسار مباشرة» while live, zoom buttons and the speed.
-class TripMap extends StatefulWidget {
+class TripMap extends ConsumerStatefulWidget {
   const TripMap({super.key, required this.live, this.height = 210});
 
   /// `live` of the driver trip detail (same shape as the customer live view).
@@ -14,10 +17,10 @@ class TripMap extends StatefulWidget {
   final double height;
 
   @override
-  State<TripMap> createState() => _TripMapState();
+  ConsumerState<TripMap> createState() => _TripMapState();
 }
 
-class _TripMapState extends State<TripMap> {
+class _TripMapState extends ConsumerState<TripMap> {
   final _map = MapController();
   bool _ready = false;
 
@@ -38,6 +41,7 @@ class _TripMapState extends State<TripMap> {
 
   @override
   Widget build(BuildContext context) {
+    final tiles = ref.watch(mapTilesProvider).value;
     final live = widget.live;
     final stations = _stations;
     final route = stations.map((s) => s.point).toList();
@@ -72,11 +76,13 @@ class _TripMapState extends State<TripMap> {
                       interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
                     ),
                     children: [
-                      TileLayer(
-                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.zoolgo.driver',
-                        tileBuilder: _darkGreenTile,
-                      ),
+                      if (tiles != null)
+                        TileLayer(
+                          urlTemplate: tiles.urlTemplate,
+                          maxNativeZoom: tiles.maxZoom.toInt(),
+                          userAgentPackageName: 'com.zoolgo.driver',
+                          tileBuilder: _darkGreenTile,
+                        ),
                       if (route.length > 1)
                         PolylineLayer(polylines: [
                           Polyline(points: route, color: const Color(0x5582F2A8), strokeWidth: 9),

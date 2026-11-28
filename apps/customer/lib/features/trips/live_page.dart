@@ -80,6 +80,7 @@ class _LivePageState extends ConsumerState<LivePage> {
 
   @override
   Widget build(BuildContext context) {
+    final tiles = ref.watch(mapTilesProvider).value;
     final live = _live;
     if (live == null) {
       return ZoolPage(title: 'تتبع الرحلة', body: _error != null ? ErrorView(error: _error!, onRetry: _load) : const LoadingView());
@@ -104,7 +105,8 @@ class _LivePageState extends ConsumerState<LivePage> {
                     interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
                   ),
                   children: [
-                    TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', userAgentPackageName: 'com.zoolgo.customer'),
+                    if (tiles != null)
+                      TileLayer(urlTemplate: tiles.urlTemplate, maxNativeZoom: tiles.maxZoom.toInt(), userAgentPackageName: 'com.zoolgo.customer'),
                     if (route.length > 1) PolylineLayer(polylines: [Polyline(points: route, color: ZoolColors.brand, strokeWidth: 6)]),
                     MarkerLayer(markers: [
                       if (route.isNotEmpty)

@@ -39,6 +39,15 @@ final meProvider = FutureProvider<CustomerMe>((ref) => ref.watch(apiProvider).me
 
 final appConfigProvider = FutureProvider<Json>((ref) => ref.watch(apiProvider).appConfig());
 
+/// Map tiles from the app config; OpenStreetMap when the config cannot be loaded.
+final mapTilesProvider = FutureProvider<MapTiles>((ref) async {
+  try {
+    return MapTiles.fromAppConfig(await ref.watch(appConfigProvider.future));
+  } catch (_) {
+    return MapTiles.osm;
+  }
+});
+
 final citiesProvider = FutureProvider<List<SearchCity>>((ref) async => (await ref.watch(apiProvider).cities()).map(SearchCity.fromJson).toList());
 
 final unreadCountProvider = FutureProvider.autoDispose<int>((ref) => ref.watch(apiProvider).unreadCount());

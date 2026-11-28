@@ -11,3 +11,4 @@ export 'src/auth/token_store.dart';
 export 'src/format/money.dart';
 export 'src/format/dates.dart';
 export 'src/format/phone.dart';
+export 'src/map_tiles.dart';
