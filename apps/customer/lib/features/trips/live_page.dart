@@ -97,7 +97,7 @@ class _LivePageState extends ConsumerState<LivePage> {
                   mapController: _map,
                   options: MapOptions(
                     initialCameraFit: points.length > 1
-                        ? CameraFit.coordinates(coordinates: points, padding: const EdgeInsets.fromLTRB(40, 160, 40, 380))
+                        ? CameraFit.coordinates(coordinates: points, padding: const EdgeInsets.fromLTRB(40, 230, 40, 400))
                         : null,
                     initialCenter: points.first,
                     initialZoom: 8,
@@ -134,7 +134,7 @@ class _LivePageState extends ConsumerState<LivePage> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: ZoolCard(
               padding: const EdgeInsets.fromLTRB(8, 8, 16, 12),
-              child: Column(children: [
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
                 Row(children: [
                   RoundIconButton(icon: IconsaxPlusLinear.arrow_right, tooltip: 'رجوع', onTap: () => Navigator.of(context).maybePop()),
                   const Expanded(child: Text('تتبع الرحلة', textAlign: TextAlign.center, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700))),
